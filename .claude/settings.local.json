@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l hindsight-integrations/claude-code/scripts/*.py hindsight-integrations/claude-code/scripts/lib/*.py)",
+      "Bash(wc -l hindsight-integrations/claude-code/tests/*.py)",
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|pass$\\\\|NotImplemented\\\\|raise NotImplementedError\\\\|stub\\\\|placeholder\" hindsight-api-slim/hindsight_api/engine/ --include=\"*.py\" -l)",
+      "Bash(grep -n \"TODO\\\\|FIXME\\\\|pass$\\\\|NotImplementedError\\\\|stub\\\\|placeholder\" hindsight-api-slim/hindsight_api/engine/retain/orchestrator.py)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -n \"decision\\\\|decisions\\\\|decision_log\\\\|adr\\\\|ADR\" hindsight-integrations/claude-code/README.md hindsight-integrations/claude-code/scripts/*.py skills/hindsight-docs/references/developer/*.md)",
+      "Bash(grep -n \"TODO\\\\|FIXME\\\\|pass$\\\\|NotImplementedError\" hindsight-api-slim/hindsight_api/engine/providers/claude_code_llm.py)",
+      "Bash(find hindsight-api-slim:*)"
+    ]
+  }
+}
