@@ -412,19 +412,34 @@ makes them queryable at speed.
 - [ ] Bank configured with initial Decision Constitution (`update_bank_config`)
 - [ ] First 5 CDRs captured manually to seed the oracle
 
-### Phase 2 — Hook Integration
-- [ ] `/oracle` slash command wired as a custom Claude Code skill
-- [ ] `/oracle-capture` slash command wired for CDR capture
-- [ ] SpecKit elaboration prompt updated to invoke `/oracle` at decision points
-- [ ] SpecKit approval workflow updated to invoke `/oracle-capture`
-- [ ] Session end protocol in CLAUDE.md
+### Phase 2 — Hook Integration ✓ Complete (2026-04-12)
+- [x] `/oracle` slash command wired as a custom Claude Code skill (`.claude/skills/oracle/SKILL.md`)
+- [x] `/oracle-capture` slash command wired for CDR capture (`.claude/skills/oracle-capture/SKILL.md`)
+- [x] SpecKit elaboration prompt updated to invoke `/oracle` at decision points (step 5a)
+- [x] SpecKit approval workflow updated to invoke `/oracle-capture` (step 8 reminder)
+- [x] Session end protocol in `CLAUDE.md`
 
 ### Phase 3 — Pattern Modeling
 - [ ] First mental models created from accumulated CDRs/ADRs
 - [ ] Observation layer reviewed and curated
 - [ ] Decision Constitution updated based on synthesized patterns
 
-### Phase 4 — Team Extension *(future)*
+### Phase 4 — External Hosting *(future — build toward)*
+- [ ] Expose oracle over a stable public URL so Claude.ai cloud sessions can reach it
+- [ ] Evaluate hosting options: Hindsight Cloud vs. self-hosted VPS vs. Fly.io/Railway
+- [ ] Migrate local PostgreSQL data to the hosted instance without losing CDR/ADR history
+- [ ] Secure the endpoint (API key auth or IP allowlist) — oracle contains architectural patterns worth protecting
+- [ ] Update `~/.hindsight/claude-code.json` `hindsightApiUrl` to point to remote instance
+- [ ] Retire the LaunchAgent once the remote instance is stable (or keep it as a local fallback)
+
+> **Why**: Local daemon means oracle is only available from this machine and only in Claude Code CLI.
+> Moving to an external host unlocks oracle access from claude.ai, mobile, and any future context
+> where decisions need to be surfaced. The data model doesn't change — only the hosting boundary.
+>
+> **Prerequisite**: Enough CDRs/ADRs accumulated (Phase 3 complete) to make the oracle worth
+> exposing. Don't migrate an empty bank.
+
+### Phase 5 — Team Extension *(future)*
 - [ ] Evaluate multi-user bank setup for Prologue team decisions
 - [ ] Consider Hindsight Cloud for shared access without self-hosting overhead
 

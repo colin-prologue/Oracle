@@ -128,6 +128,13 @@ Given that feature description, do this:
     5. Generate Functional Requirements
        Each requirement must be testable
        Use reasonable defaults for unspecified details (document assumptions in Assumptions section)
+    5a. **Oracle check** — Before finalizing requirements, identify any architectural, technology selection,
+        or library-choice decisions embedded in the feature. For each one, suggest running `/oracle` with
+        a specific question. Example prompt to the user:
+        > This feature involves [decision area]. Before we commit to a requirement, run:
+        > `/oracle "[specific question about this decision]"`
+        If the oracle returns prior decisions that contradict or inform a requirement, incorporate the
+        finding into the spec (as an assumption or constraint) and note it explicitly.
     6. Define Success Criteria
        Create measurable, technology-agnostic outcomes
        Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
@@ -234,6 +241,11 @@ Given that feature description, do this:
    - `SPEC_FILE` — the spec file path
    - Checklist results summary
    - Readiness for the next phase (`/speckit.clarify` or `/speckit.plan`)
+   - **Oracle capture reminder**: If any architectural, technology, or library decisions were confirmed
+     during elaboration, include this prompt:
+     > Any decisions made during this spec elaboration should be captured now. Run:
+     > `/oracle-capture "[brief description of the decision]"`
+     > for each confirmed decision before moving to planning.
 
 9. **Check for extension hooks**: After reporting completion, check if `.specify/extensions.yml` exists in the project root.
    - If it exists, read it and look for entries under the `hooks.after_specify` key
