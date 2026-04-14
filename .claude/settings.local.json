@@ -39,7 +39,12 @@
       "Read(//Users/colindwan/Library/LaunchAgents/**)",
       "Bash(launchctl load:*)",
       "Bash(launchctl list:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(.specify/scripts/bash/update-agent-context.sh claude:*)",
+      "Bash(.specify/extensions/git/scripts/bash/auto-commit.sh after_plan:*)"
     ]
   }
 }

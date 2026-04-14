@@ -59,3 +59,10 @@ At the end of every session, before closing:
 3. **Capture any unrecorded decisions**: If decisions were made this session that are not yet in a CDR, run `/oracle-capture "[description]"` before closing.
 
 Session logs feed the Observation layer — Hindsight synthesizes patterns from them automatically over time.
+
+## Active Technologies
+- Python 3.14 (scripts) — no new runtime + Hindsight daemon (http://localhost:9077), hindsight-embed (uvx), Anthropic API (claude-haiku-3) (002-oracle-pattern-modeling)
+- Hindsight oracle bank (postgresql via daemon) + `.decisions/` markdown files (002-oracle-pattern-modeling)
+
+## Recent Changes
+- 002-oracle-pattern-modeling: Added Python 3.14 (scripts) — no new runtime + Hindsight daemon (http://localhost:9077), hindsight-embed (uvx), Anthropic API (claude-haiku-3)
