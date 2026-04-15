@@ -1,4 +1,4 @@
-# Decision Oracle — Architecture & SpecKit Implementation Guide
+# Decision Oracle — Architecture & Implementation Guide
 
 ## What This Is
 
@@ -7,24 +7,37 @@ patterns and surfaces them automatically during development sessions. It is not 
 a document store — it is a reasoning system that learns *how* decisions get made, not just
 *what* was decided.
 
-The oracle is built on **Hindsight** (MIT-licensed, open source) and extends it with three
-structured capture layers: ADRs (Architecture Decision Records), CDRs (Coding Decision Records),
-and Session Logs. These layers feed the oracle's memory banks and are queryable during spec
-elaboration, code review, or implementation planning.
+The oracle is built on **Hindsight** (MIT-licensed, open source) and stores two types of artifacts:
+
+| Artifact | ID | What it is |
+|---|---|---|
+| **Philosophy** | PHI-NNN | A cross-project held opinion — prescriptive, debatable, not project-scoped |
+| **Observation** | OBS-NNN | A synthesized pattern noticed across decisions — descriptive |
+
+Session logs feed both layers over time. The oracle does not store project-specific ADRs or
+decisions — those belong in each project's own Knowledge Base (e.g. Claude-Root's `.specify/memory/`).
 
 ---
 
 ## Core Concept
 
+The oracle models *meta-reasoning* — how Colin tends to decide, not what was decided in any
+single project. The separation is strict:
+
+| Layer | System | Question answered | Examples |
+|---|---|---|---|
+| **Oracle** | Hindsight bank | "How do I tend to decide?" | PHI: "persistence layers must outlive consumers" |
+| **KB** | Project memory | "What did we decide here?" | ADR: "chose FastMCP for this project" |
+
+A project decision that would change your default approach across all future projects → PHI.
+A project decision that's ground truth for this project only → ADR in the KB.
+
 Every SpecKit spec elaboration involves decisions. The oracle closes the loop:
 
-- **Before elaboration** — auto-recall surfaces relevant prior decisions into Claude's context
+- **Before elaboration** — auto-recall surfaces relevant PHIs and OBSs into Claude's context
 - **During elaboration** — `/oracle [question]` queries the oracle at explicit decision points
-- **After approval** — CDR capture records the confirmed decision as a structured entry
-- **Over time** — Hindsight's Observation layer synthesizes patterns across entries,
-  building a living model of Colin's decision style that improves with each session
-
-The oracle does not replace SpecKit's reasoning. It grounds it in project-specific history.
+- **Session end** — `/oracle-debate` or `/oracle-observe` if a new meta-pattern emerged
+- **Over time** — `/oracle-synthesize` synthesizes OBS-NNN from accumulated PHIs and session logs
 
 ---
 
@@ -39,44 +52,38 @@ Hindsight organizes memory into four networks:
 
 | Network | Purpose | Oracle Use |
 |---|---|---|
-| **World** | Objective facts | Project constraints, tech stack, non-negotiables |
-| **Experiences** | Agent interactions | Session outcomes, rejected approaches, debugging results |
+| **World** | Objective facts | Cross-project constraints, non-negotiables |
+| **Experiences** | Agent interactions | Session outcomes, rejected approaches |
 | **Observations** | Auto-synthesized patterns | Decision style model, recurring tradeoffs |
-| **Mental Models** | Living documents | Decision Constitution, domain playbooks |
+| **Mental Models** | Living documents | Decision Constitution |
 
 The three operations are:
 
-- `retain` — store a new memory (CDR/ADR capture calls this)
+- `retain` — store a new memory (PHI/OBS capture calls this)
 - `recall` — semantic + keyword + graph + temporal search (auto-injected before every prompt)
 - `reflect` — synthesize across memories to answer a question (oracle query calls this)
 
 ### Claude Code Integration
 
-Hindsight ships a native Claude Code plugin (`hindsight-integrations/claude-code`) that wires
-into Claude Code's hook system. It is **not an MCP server** — it is a plugin that runs Python
-scripts on hook events.
+Hindsight ships a native Claude Code plugin that wires into Claude Code's hook system.
+It is **not an MCP server** — it runs Python scripts on hook events.
 
 | Hook Event | Script | Purpose |
 |---|---|---|
-| `SessionStart` | `session_start.py` | Health check — verify Hindsight is reachable |
-| `UserPromptSubmit` | `recall.py` | **Auto-recall** — query oracle bank, inject as invisible context |
+| `SessionStart` | `session_start.py` | Health check |
+| `UserPromptSubmit` | `recall.py` | **Auto-recall** — inject relevant PHIs/OBSs before every prompt |
 | `Stop` | `retain.py` | **Auto-retain** — extract transcript, POST to Hindsight (async) |
-| `SessionEnd` | `session_end.py` | Cleanup — stop auto-managed daemon if started |
+| `SessionEnd` | `session_end.py` | Cleanup |
 
-Auto-recall and auto-retain are handled entirely by the plugin. No custom hook code is needed
-for these operations.
+Auto-recall and auto-retain are handled entirely by the plugin.
 
 ### What Is NOT Needed
 
-**Graphiti** (Zep) is not required. It provides a temporal knowledge graph useful for
-relational queries across entities, but Hindsight's Observation layer covers the decision
-pattern modeling use case with less infrastructure overhead. Add Graphiti later only if
-explicit graph traversal queries become necessary (e.g. "show all decisions influenced by
-constraint X").
+**Graphiti** (Zep) — not required. Hindsight's Observation layer covers decision pattern
+modeling with less infrastructure overhead.
 
-**Serena** is not part of the oracle stack. It is a separate tool for LSP-backed code
-navigation and token optimization within a single project session. It does not help with
-cross-session memory.
+**Serena** — not part of the oracle stack. It is for LSP-backed code navigation within a
+single project session, not cross-session memory.
 
 ---
 
@@ -84,35 +91,20 @@ cross-session memory.
 
 ### Prerequisites
 
-- Docker (recommended) or `uvx` (via `pip install uv`) for the Hindsight server
-- An LLM API key (Anthropic, OpenAI, Gemini, Groq, or Ollama for local)
+- `uvx` (via `pip install uv`) for the Hindsight daemon
+- An Anthropic API key (key-based, not `claude-code` — see PHI-001)
 
-### Step 1 — Run the Hindsight Server
-
-**Docker (recommended — persistent volume ensures memory survives restarts):**
+### Step 1 — Run the Hindsight Daemon
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-xxx
-
-docker run --rm -it --pull always \
-  -p 8888:8888 \
-  -p 9999:9999 \
-  -e HINDSIGHT_API_LLM_PROVIDER=anthropic \
-  -e HINDSIGHT_API_LLM_API_KEY=$ANTHROPIC_API_KEY \
-  -v $HOME/.hindsight-oracle:/home/hindsight/.pg0 \
-  ghcr.io/vectorize-io/hindsight:latest
-
-# API: http://localhost:8888
-# UI:  http://localhost:9999
+HINDSIGHT_API_EMBEDDINGS_LOCAL_FORCE_CPU=1 \
+HINDSIGHT_API_RERANKER_LOCAL_FORCE_CPU=1 \
+uvx hindsight-embed daemon start
 ```
 
-The volume mount at `$HOME/.hindsight-oracle` is critical — this is what persists memory
-across container restarts. Without it, every restart is a cold start.
-
-**Alternative — local daemon (auto-managed by plugin via uvx):**
-
-Skip the Docker step. The plugin will start and stop `hindsight-embed` automatically using
-`uvx`. Requires an LLM API key set in the environment.
+CPU flags are required on macOS Apple Silicon (PHI-001 / ADR-002 in oracle setup history).
+The daemon runs on `http://localhost:9077` and is managed as a macOS LaunchAgent
+(`com.hindsight.daemon`) — it must outlive individual sessions (PHI-002).
 
 ### Step 2 — Install the Claude Code Plugin
 
@@ -121,261 +113,119 @@ claude plugin marketplace add vectorize-io/hindsight
 claude plugin install hindsight-memory
 ```
 
-Then register the hooks (one-time setup):
+Then register the hooks:
 
 ```bash
 /hindsight:setup
 ```
 
-Restart Claude Code. You should see `[Hindsight]` log lines on the next session start.
-
 ### Step 3 — Configure the Plugin
 
-Create `~/.hindsight/claude-code.json`:
+Create `~/.hindsight/claude-code.json` (not `~/.claude/plugins/data/...` — that path is ignored):
 
 ```json
 {
-  "hindsightApiUrl": "http://localhost:8888",
+  "hindsightApiUrl": "http://localhost:9077",
   "bankId": "oracle",
-  "bankMission": "Model Colin's architectural and coding decision patterns at Prologue Games. Prioritize tradeoffs between shipping velocity and technical debt. Surface relevant prior decisions when asked about architecture, library selection, agent orchestration, and tooling adoption.",
-  "retainMission": "Extract architectural decisions, library choices, approach tradeoffs, rejected options, and the constraints that drove each decision. Capture the reasoning behind decisions, not just the outcomes.",
+  "bankMission": "Model Colin's cross-project decision-making philosophies and patterns. Surface PHIs and OBSs relevant to current decisions. Do not store project-specific decisions — those belong in each project's knowledge base.",
+  "retainMission": "Extract cross-project philosophies, recurring patterns, and meta-reasoning about how decisions get made. Ignore project-specific implementation choices.",
   "dynamicBankId": false,
   "autoRecall": true,
-  "autoRetain": true,
-  "retainEveryNTurns": 5,
-  "debug": false
+  "autoRetain": false
 }
 ```
 
-### Step 4 — Configure Bank Directives (One-Time Python Setup)
+`autoRetain: false` is intentional — retain only on SessionEnd, PreCompact, and explicit
+`/oracle-debate` or `/oracle-observe` invocations (PHI-003).
 
-The bank's directives and reflect mission shape every oracle query. Run once after the
-server is up:
+### Step 4 — Configure Bank Directives
 
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="http://localhost:9077")
 
 client.update_bank_config(
     bank_id="oracle",
     reflect_mission="""
-        Model Colin's architectural and coding decision patterns at Prologue Games.
-        Prioritize tradeoffs between shipping velocity and technical debt.
-        Surface relevant prior decisions when asked about architecture, library
-        selection, agent orchestration, and tooling adoption. Favor decisions that
-        reflect spec-driven development principles and SpecKit methodology.
-        Flag when a proposed decision contradicts established patterns.
+        Model Colin's cross-project decision-making philosophies and observed patterns.
+        Surface PHIs and OBSs relevant to the current decision point.
+        Flag when a proposed decision contradicts an established PHI.
+        Do not surface project-specific ADRs — those belong in project KBs.
     """,
     observations_mission="""
-        Synthesize recurring patterns in Colin's decision-making across sessions.
-        Identify consistent preferences, non-negotiables, and tradeoffs accepted under
-        pressure vs. deliberate design choices. Build a living model of decision style.
+        Synthesize recurring patterns in Colin's decision-making across projects and sessions.
+        Identify consistent philosophies, non-negotiables, and tradeoffs accepted across contexts.
+        Build a living model of decision style — not a log of individual decisions.
     """,
-)
-
-client.create_mental_model(
-    bank_id="oracle",
-    name="Decision Constitution",
-    description="""
-        Colin's non-negotiables and recurring preferences:
-        - Never recommend approaches explicitly rejected in past CDRs
-        - Always surface the constraint that drove a prior decision, not just the outcome
-        - Distinguish between decisions made under time pressure vs. deliberate design
-        - Treat Unreal Engine constraints as a hard context layer for all game code decisions
-        - Disposition: direct, pattern-aware, skeptical of novelty without clear justification
-    """
 )
 ```
 
 ---
 
-## Capture Layers
+## Artifact Layers
 
-### Layer 1 — CDR (Coding Decision Record)
+### Layer 1 — Philosophy (PHI-NNN)
 
-Captures implementation-level decisions: library choices, pattern selections, approach
-tradeoffs within a single feature or task.
+A cross-project held opinion that should govern future decisions. Prescriptive but debatable —
+not a hard rule. A PHI belongs in the oracle only if it would apply regardless of which project
+you're working on.
 
 **Schema:**
 
 ```markdown
-## CDR-{id} — {title}
+## PHI-{NNN} — {title}
 
 **Date:** {YYYY-MM-DD}
-**Project:** {project name}
-**Domain:** {e.g. agent-orchestration, unreal-integration, tooling}
-**Session:** {spec or task reference}
+**Domain:** {architecture, tooling, process, infrastructure}
+**Source:** {what experience prompted this philosophy}
 
-### Decision
-{What was decided, one sentence}
+### Philosophy
+{One or two sentences: the held opinion, phrased as a disposition not a rule}
 
-### Context
-{What problem or constraint prompted this decision}
+### Why I Hold This
+{The experience or repeated pattern that grounded this position}
 
-### Options Considered
-- **{Option A}** — {why considered, why rejected}
-- **{Option B}** — {why considered, why rejected}
-- **{Chosen option}** — {why selected}
+### Where It Applies
+{Cross-project context — when does this philosophy apply}
 
-### Constraints That Applied
-{Tech constraints, time pressure, team capability, prior commitments}
+### Known Tensions
+{What situations create legitimate pressure against this philosophy}
 
-### Confidence
-{High / Medium / Low} — {rationale}
-
-### Revisit Trigger
-{What would prompt revisiting this decision}
+### Open to Revision When
+{What would change your mind}
 ```
 
-**Capture (semi-manual):**
+**Capture:** `/oracle-debate "[description]"` — drafts, debates, retains after confirmation.
+Files written to `.decisions/phi/PHI-{NNN}-{slug}.md`.
 
-CDR capture is intentionally semi-manual. After confirming a decision, prompt Claude to
-capture it:
+**Filter:** Ask "Would this change my default in a new project with no prior context?" If yes → PHI.
+If it's ground truth for this project only → ADR in the project KB.
 
-```
-/oracle-capture [brief description of the decision]
-```
+### Layer 2 — Observation (OBS-NNN)
 
-Claude will draft the CDR in the schema above, confirm with you, then call:
+A synthesized pattern extracted from accumulated PHIs and session logs. Descriptive, not prescriptive.
+OBSs are generated by `/oracle-synthesize` (periodic corpus synthesis) or `/oracle-observe`
+(impromptu mid-session insight with fit-check reflect).
 
-```python
-client.retain(
-    bank_id="oracle",
-    content=cdr_markdown,
-    metadata={
-        "type": "cdr",
-        "project": "prologue-games",
-        "domain": domain,
-        "date": today,
-        "confidence": confidence,
-    }
-)
-```
-
-The file is also written to `.decisions/cdrs/CDR-{id}.md` in the repo.
-
-### Layer 2 — ADR (Architecture Decision Record)
-
-Captures system-level decisions: structural choices, cross-cutting patterns, technology
-bets that affect multiple features or the long-term codebase shape.
-
-ADRs follow the same schema as CDRs but carry additional fields:
-
-```markdown
-### Scope
-{Component / System / Cross-cutting}
-
-### Affected Systems
-{List of systems or components impacted}
-
-### Reversibility
-{Reversible with low cost / Reversible with high cost / Effectively irreversible}
-
-### Status
-{Proposed / Accepted / Superseded by ADR-{id}}
-```
-
-ADRs are stored as flat markdown files in `.decisions/adrs/` in the repo. The file is
-the source of truth; Hindsight is the retrieval layer.
+OBSs are retained to the oracle bank only; no canonical file is written to disk. The bank is
+the source of truth.
 
 ### Layer 3 — Session Log
 
-A lightweight end-of-session summary. The plugin auto-retains conversation transcripts
-via the `Stop` hook — session logs are a structured supplement for decisions and
-outcomes not fully captured in the transcript.
-
-The CLAUDE.md session-end protocol handles this:
-
-```markdown
-## Session End Protocol
-
-At the end of every session, before closing:
-1. Write a 3-5 sentence summary of what was decided, built, or resolved
-2. Note any rejected approaches and why
-3. Retain via: client.retain(bank_id="oracle", content=summary, metadata={"type": "session-log", ...})
-```
-
-Session logs feed the Observation layer over time — Hindsight synthesizes patterns from
-them automatically.
+A lightweight end-of-session summary retained manually via the Session End Protocol in `CLAUDE.md`.
+Session logs feed the Observation layer over time — Hindsight synthesizes patterns from them.
 
 ---
 
-## Hook Design
+## Oracle Skills
 
-The plugin handles auto-recall and auto-retain. The remaining oracle-specific workflows
-are triggered manually or via SpecKit integration.
-
-### Auto-Recall (Plugin-Managed)
-
-Fires automatically on every `UserPromptSubmit`. No configuration needed beyond the
-plugin settings in `~/.hindsight/claude-code.json`. Relevant prior decisions from the
-oracle bank are injected as invisible context before Claude sees your prompt.
-
-### Oracle Query — `/oracle`
-
-For explicit decision-point queries during spec elaboration:
-
-```
-/oracle "Should we use a message queue or direct RPC for the agent coordinator?"
-```
-
-This calls `reflect` on the oracle bank. Add this as a CLAUDE.md instruction or a
-custom skill once SpecKit is installed.
-
-Underlying call:
-```python
-client.reflect(bank_id="oracle", query=question)
-```
-
-### CDR Capture — `/oracle-capture`
-
-Fires after a spec decision is confirmed. Semi-manual by design — fully automatic capture
-risks low-quality entries. The slash command prompts for structured input:
-
-```
-/oracle-capture "Chose Hindsight over Graphiti for oracle layer"
-```
-
-Claude drafts the CDR in the schema above, awaits confirmation, then retains it.
-
-### SpecKit Integration (Post-Install)
-
-After SpecKit is installed, wire the oracle into the spec elaboration workflow:
-
-- **Pre-elaboration:** auto-recall is already active via the plugin
-- **Decision points:** add `/oracle` invocation to the SpecKit elaboration prompt
-- **Post-approval:** add `/oracle-capture` invocation to the spec approval workflow
-
-The specific hook points will depend on SpecKit's extension API.
-
----
-
-## Querying the Oracle
-
-### Explicit oracle query (reflect)
-```
-/oracle "What patterns do I use for multi-agent coordination?"
-```
-
-### Recall a specific prior decision
-```python
-client.recall(bank_id="oracle", query="Redis caching rejection")
-```
-
-### List mental models
-```python
-client.list_mental_models(bank_id="oracle")
-```
-
-### Refresh the Decision Constitution
-```python
-client.create_mental_model(
-    bank_id="oracle",
-    name="Prologue Architecture Principles",
-    description="Synthesize my recurring architectural preferences and non-negotiables"
-)
-```
+| Skill | Purpose |
+|---|---|
+| `/oracle "[question]"` | Query oracle at a decision point — runs reflect on the oracle bank |
+| `/oracle-debate "[philosophy]"` | Draft, debate, and retain a PHI — semi-manual by design |
+| `/oracle-observe "[insight]"` | Capture impromptu observation with fit-check reflect; retains as OBS-NNN |
+| `/oracle-synthesize` | Periodic synthesis: reflect across corpus, curate, retain as OBS-NNN |
 
 ---
 
@@ -383,91 +233,93 @@ client.create_mental_model(
 
 ```
 .decisions/
-  adrs/
-    ADR-001-agent-orchestration-pattern.md
-    ADR-002-mcp-server-hosting.md
-    ...
-  cdrs/
-    CDR-001-speckit-memory-layer.md
-    CDR-002-hindsight-vs-graphiti.md
-    ...
-  logs/
-    2026-04-09-session.md
+  phi/
+    PHI-001-background-services-must-be-stateless.md
+    PHI-002-persistence-layers-outlive-consumers.md
+    PHI-003-prefer-conscious-capture-over-automatic-retention.md
     ...
   DECISION_ORACLE.md          ← this file
   DECISION_CONSTITUTION.md    ← bank mission/directives in human-readable form
+
+.claude/skills/
+  oracle/           ← /oracle query skill
+  oracle-debate/    ← /oracle-debate PHI capture skill
+  oracle-observe/   ← /oracle-observe OBS capture skill
+  oracle-synthesize/ ← /oracle-synthesize periodic synthesis skill
 ```
 
-The `.decisions/` folder is committed to the repo. Hindsight is the retrieval and
-synthesis layer on top of it — the files are the canonical record, Hindsight is what
-makes them queryable at speed.
+The `.decisions/phi/` folder is committed to the repo. The oracle bank is the retrieval
+and synthesis layer — PHI files are the canonical record, Hindsight makes them queryable.
 
 ---
 
 ## Roadmap
 
-### Phase 1 — Foundation
-- [ ] Hindsight running locally with persistent Docker volume
-- [ ] Claude Code plugin installed and hooks registered (`/hindsight:setup`)
-- [ ] Bank configured with initial Decision Constitution (`update_bank_config`)
-- [ ] First 5 CDRs captured manually to seed the oracle
+### Phase 1 — Foundation ✓ Complete
+- [x] Hindsight daemon running locally via uvx + LaunchAgent
+- [x] Claude Code plugin installed and hooks registered
+- [x] Bank configured with initial Decision Constitution
+- [x] First PHIs seeded from setup experience
 
 ### Phase 2 — Hook Integration ✓ Complete (2026-04-12)
-- [x] `/oracle` slash command wired as a custom Claude Code skill (`.claude/skills/oracle/SKILL.md`)
-- [x] `/oracle-capture` slash command wired for CDR capture (`.claude/skills/oracle-capture/SKILL.md`)
-- [x] SpecKit elaboration prompt updated to invoke `/oracle` at decision points (step 5a)
-- [x] SpecKit approval workflow updated to invoke `/oracle-capture` (step 8 reminder)
+- [x] `/oracle` skill wired (`.claude/skills/oracle/SKILL.md`)
+- [x] `/oracle-debate` skill wired for PHI capture (`.claude/skills/oracle-debate/SKILL.md`)
 - [x] Session end protocol in `CLAUDE.md`
 
 ### Phase 3 — Pattern Modeling ✓ Complete (2026-04-14)
-- [x] `/oracle-synthesize` skill written (`.claude/skills/oracle-synthesize/SKILL.md`) — synthesizes OBS-NNN from reflect query
-- [x] `/oracle-observe` skill written (`.claude/skills/oracle-observe/SKILL.md`) — captures impromptu observations via fit-check reflect
-- [x] First Observation created and curated: OBS-001 retained to oracle bank with `derived_from: CDR-001, CDR-002, CDR-003, ADR-001`
-- [x] Observation layer reviewed: reflect surfaces patterns correctly; document IDs not cited directly (use `GET /documents/{id}` to verify retention)
-- [x] Decision Constitution updated with 3 OBS-001-derived principles: stateless architecture preference, build-only-what's-needed, prefer self-contained tooling
-- [x] `DECISION_CONSTITUTION.md` written to disk at `.claude/.decisions/DECISION_CONSTITUTION.md`
-- [x] Cadence query pair validated: both queries return rich output; SC-003 <30s target not met (~50s at `mid` budget with mature corpus — noted in quickstart.md)
+- [x] `/oracle-synthesize` skill written — synthesizes OBS-NNN from reflect query
+- [x] `/oracle-observe` skill written — captures impromptu observations via fit-check reflect
+- [x] First Observation created and curated: OBS-001 retained to oracle bank
+- [x] Decision Constitution updated and written to disk at `.claude/.decisions/DECISION_CONSTITUTION.md`
+- [x] Cadence query pair validated; SC-003 <30s target not met (~50s at `mid` budget with mature corpus — acceptable for non-interactive use)
 
-### Phase 4 — External Hosting *(future — build toward)*
+### Phase 3b — Vocabulary Alignment ✓ Complete (2026-04-15)
+- [x] Replaced CDR artifact type with PHI (Philosophy) — cross-project held opinions, debatable
+- [x] Clarified oracle scope: meta-patterns only, no project-specific ADRs
+- [x] Renamed `/oracle-capture` → `/oracle-debate`
+- [x] Removed `.decisions/adrs/` and `.decisions/cdrs/` — oracle has `.decisions/phi/` only
+- [x] Updated all skills to use PHI/OBS vocabulary
+
+### Phase 4 — External Hosting *(future)*
 - [ ] Expose oracle over a stable public URL so Claude.ai cloud sessions can reach it
 - [ ] Evaluate hosting options: Hindsight Cloud vs. self-hosted VPS vs. Fly.io/Railway
-- [ ] Migrate local PostgreSQL data to the hosted instance without losing CDR/ADR history
-- [ ] Secure the endpoint (API key auth or IP allowlist) — oracle contains architectural patterns worth protecting
+- [ ] Migrate local PostgreSQL data to the hosted instance
+- [ ] Secure the endpoint (API key auth or IP allowlist)
 - [ ] Update `~/.hindsight/claude-code.json` `hindsightApiUrl` to point to remote instance
-- [ ] Retire the LaunchAgent once the remote instance is stable (or keep it as a local fallback)
+- [ ] Retire the LaunchAgent once the remote instance is stable
 
-> **Why**: Local daemon means oracle is only available from this machine and only in Claude Code CLI.
-> Moving to an external host unlocks oracle access from claude.ai, mobile, and any future context
-> where decisions need to be surfaced. The data model doesn't change — only the hosting boundary.
->
-> **Prerequisite**: Enough CDRs/ADRs accumulated (Phase 3 complete) to make the oracle worth
-> exposing. Don't migrate an empty bank.
+### Phase 5 — SpecKit Integration *(pending Claude-Root SpecKit stabilization)*
+- [ ] Wire oracle hooks into SpecKit's extensions.yml at natural decision points
+- [ ] Oracle owns the integration hooks — SpecKit executes them, doesn't know about oracle
+- [ ] Hook at `before_implement`: oracle recall — surface relevant PHIs for the feature
+- [ ] Hook at `after_specify`: oracle-observe reminder — prompt if meta-pattern emerged
 
-### Phase 5 — Team Extension *(future)*
-- [ ] Evaluate multi-user bank setup for Prologue team decisions
+### Phase 6 — Team Extension *(future)*
+- [ ] Evaluate multi-user bank setup
 - [ ] Consider Hindsight Cloud for shared access without self-hosting overhead
 
 ---
 
-## Key Decisions Already Made
+## Key Architectural Decisions
 
-**Hindsight over Graphiti for oracle layer** — Hindsight's Observation and Mental Model
-layers cover the decision pattern modeling use case. Graphiti's relational graph queries
-are not needed at this stage and would add infrastructure complexity without clear benefit.
+**Oracle stores meta-patterns only, not project decisions** — Project-specific ADRs and LOGs
+belong in each project's KB. The oracle's value comes from cross-project pattern recognition;
+polluting it with project-specific decisions degrades reflect quality. Filter: "Would this
+change my default in a new project?" If yes → PHI. If no → ADR in the KB.
 
-**Hindsight over Serena for memory** — Serena's memory is project-scoped and codebase-
-focused. The oracle needs to be person-scoped and decision-focused. These are different
-tools solving different problems and are not in conflict.
+**PHI not CDR** — "Coding Decision Record" implied a project artifact. "Philosophy" captures
+what the oracle actually stores: cross-project held opinions, open to debate, not hard rules.
 
-**Plugin over MCP for Claude Code integration** — Hindsight integrates as a Claude Code
-plugin using native hook events, not as an MCP server. Auto-recall and auto-retain are
-handled by the plugin; the oracle is a bank configuration, not a separate service.
+**Observation over Automation** — Oracle-observe and oracle-debate are manual invocations, not
+automated hooks. Pattern recognition requires judgment. Hooks can surface reminders; invocation
+stays deliberate (PHI-003).
 
-**CDR capture is semi-manual by design** — fully automatic capture risks low-quality
-entries. The `/oracle-capture` command prompts for structured input rather than auto-
-generating CDRs from session transcripts. Quality of oracle reasoning depends on quality
-of input.
+**Hindsight over Graphiti** — Hindsight's Observation and Mental Model layers cover decision
+pattern modeling. Graphiti's relational graph queries are not needed at this stage.
 
-**Files as canonical record, Hindsight as retrieval** — ADRs and CDRs live as committed
-markdown files. Hindsight is not the source of truth, it is the query interface. This
-avoids lock-in and keeps decisions auditable in git history.
+**Plugin over MCP** — Hindsight integrates as a Claude Code plugin using native hook events,
+not as an MCP server. Auto-recall and auto-retain are handled by the plugin.
+
+**Files as canonical record, Hindsight as retrieval** — PHI files are committed to the repo.
+Hindsight is not the source of truth, it is the query interface. Avoids lock-in, keeps
+decisions auditable in git history.

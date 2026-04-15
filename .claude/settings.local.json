@@ -45,7 +45,12 @@
       "Bash(.specify/scripts/bash/setup-plan.sh:*)",
       "Bash(.specify/scripts/bash/update-agent-context.sh claude:*)",
       "Bash(.specify/extensions/git/scripts/bash/auto-commit.sh after_plan:*)",
-      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)"
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git branch:*)",
+      "Bash(gh api:*)",
+      "Bash(git rm:*)"
     ]
   }
 }
