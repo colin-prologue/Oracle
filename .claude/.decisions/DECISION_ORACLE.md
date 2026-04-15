@@ -419,10 +419,14 @@ makes them queryable at speed.
 - [x] SpecKit approval workflow updated to invoke `/oracle-capture` (step 8 reminder)
 - [x] Session end protocol in `CLAUDE.md`
 
-### Phase 3 — Pattern Modeling
-- [ ] First mental models created from accumulated CDRs/ADRs
-- [ ] Observation layer reviewed and curated
-- [ ] Decision Constitution updated based on synthesized patterns
+### Phase 3 — Pattern Modeling ✓ Complete (2026-04-14)
+- [x] `/oracle-synthesize` skill written (`.claude/skills/oracle-synthesize/SKILL.md`) — synthesizes OBS-NNN from reflect query
+- [x] `/oracle-observe` skill written (`.claude/skills/oracle-observe/SKILL.md`) — captures impromptu observations via fit-check reflect
+- [x] First Observation created and curated: OBS-001 retained to oracle bank with `derived_from: CDR-001, CDR-002, CDR-003, ADR-001`
+- [x] Observation layer reviewed: reflect surfaces patterns correctly; document IDs not cited directly (use `GET /documents/{id}` to verify retention)
+- [x] Decision Constitution updated with 3 OBS-001-derived principles: stateless architecture preference, build-only-what's-needed, prefer self-contained tooling
+- [x] `DECISION_CONSTITUTION.md` written to disk at `.claude/.decisions/DECISION_CONSTITUTION.md`
+- [x] Cadence query pair validated: both queries return rich output; SC-003 <30s target not met (~50s at `mid` budget with mature corpus — noted in quickstart.md)
 
 ### Phase 4 — External Hosting *(future — build toward)*
 - [ ] Expose oracle over a stable public URL so Claude.ai cloud sessions can reach it

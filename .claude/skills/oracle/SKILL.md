@@ -26,7 +26,7 @@ If `$ARGUMENTS` is empty, ask the user: "What decision are you facing?"
 ```bash
 curl -s -X POST "http://localhost:9077/v1/default/banks/oracle/reflect" \
   -H "Content-Type: application/json" \
-  -d "{\"query\": $(echo "$ARGUMENTS" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'), \"budget\": \"medium\"}"
+  -d "{\"query\": $(echo "$ARGUMENTS" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'), \"budget\": \"mid\"}"
 ```
 
 If the curl command fails with a connection error:
