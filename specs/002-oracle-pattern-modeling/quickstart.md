@@ -32,6 +32,17 @@ The skill runs a reflect query against CDR-001 through CDR-005 and ADR-001, pres
 
 **Acceptance check (SC-001)**: The output should cite at least 2 CDR IDs (e.g., CDR-001, CDR-003) and name at least one recurring preference (e.g., "lean toward tooling that minimizes account proliferation").
 
+### Step 2: Verify retention
+
+Use the documents endpoint — reflect does not surface document IDs:
+
+```bash
+curl -s http://localhost:9077/v1/default/banks/oracle/documents/OBS-001 | \
+  python3 -c "import json,sys; d=json.load(sys.stdin); print('id:', d['id']); print('derived_from:', d['document_metadata'].get('derived_from')); print('type:', d['document_metadata'].get('type'))"
+```
+
+Expected: `type: observation`, `derived_from` contains ≥2 CDR/ADR IDs.
+
 ---
 
 ## User Story 2 — Update the Decision Constitution
@@ -50,30 +61,44 @@ Compare the Observation (what patterns you actually follow) against the constitu
 
 ### Step 3: Update the Mental Model
 
-Run this Python snippet (replace the description with the updated constitution text):
+First, find the existing Decision Constitution ID:
 
-```python
+```bash
+curl -s http://localhost:9077/v1/default/banks/oracle/mental-models | \
+  python3 -c "import json,sys; [print(m['id'], m['name']) for m in json.load(sys.stdin)['items']]"
+```
+
+Then PATCH it with the updated source query (replace `<ID>` and the constitution text):
+
+```bash
 python3 -c "
 import json, urllib.request
 
-updated_constitution = '''
-[PASTE UPDATED CONSTITUTION TEXT HERE]
+mental_model_id = '<ID>'
+
+updated_source_query = '''
+[PASTE UPDATED CONSTITUTION PRINCIPLES HERE]
 '''
 
-payload = {
-    'name': 'Decision Constitution',
-    'description': updated_constitution.strip()
-}
+payload = {'source_query': updated_source_query.strip()}
 
 req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/mental_models',
+    f'http://localhost:9077/v1/default/banks/oracle/mental-models/{mental_model_id}',
     data=json.dumps(payload).encode(),
     headers={'Content-Type': 'application/json'},
-    method='POST'
+    method='PATCH'
 )
 with urllib.request.urlopen(req, timeout=30) as resp:
-    print(json.loads(resp.read()))
+    print(json.loads(resp.read())['id'])
 "
+```
+
+Then trigger a refresh to regenerate the content:
+
+```bash
+curl -s -X POST \
+  "http://localhost:9077/v1/default/banks/oracle/mental-models/<ID>/refresh" \
+  -H "Content-Type: application/json"
 ```
 
 Also update the file on disk:
@@ -105,6 +130,8 @@ Run these two `/oracle` calls in sequence at the start or end of any session whe
 **When to run**: After adding 2+ new CDRs, or at the start of any architecture-heavy session.
 
 **Acceptance check (SC-003)**: Both queries complete within 30 seconds of daemon start with no additional setup.
+
+> **Observed timing**: At `mid` budget with a mature corpus (~35k input tokens), reflect takes ~50s. SC-003 was written against a 5-CDR corpus. Latency scales with corpus size — expect 45–60s in normal operation. The <30s target is aspirational; actual cadence queries are not interactive, so this is tolerable.
 
 **Acceptance check (SC-004)**: After adding 3 new CDRs, Query 2 produces output that references specific CDR IDs and either confirms consistency or names a specific tension.
 

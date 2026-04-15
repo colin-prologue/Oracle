@@ -51,3 +51,10 @@ Before running reflect or /oracle queries, verify no pending operations:
   curl -s http://localhost:9077/v1/default/banks/oracle/stats | \
     python3 -c "import json,sys; d=json.load(sys.stdin); print(d['pending_operations'])"
 Expected output: 0
+
+### Amendment — 2026-04-14
+The pending_operations check should distinguish between operation types:
+- **Background consolidation ops** (daemon auto-synthesis, observation network updates) — low contention risk; safe to proceed with reflect even if non-zero
+- **User-triggered retain ops** (explicit CDR retain, session-end retain) — high contention risk; must wait for 0 before reflect
+
+In practice, persistent low pending_operations (1–3) after 24 hours of no user activity indicates consolidation work, not retain backlog. This is safe to proceed through. The blocking condition is a growing or large pending count coinciding with recent retain activity.
