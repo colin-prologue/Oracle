@@ -6,12 +6,14 @@ This repo is the Decision Oracle — a persistent memory layer built on Hindsigh
 
 Key documents:
 - **Architecture & implementation guide**: `.claude/.decisions/DECISION_ORACLE.md`
-- **Decision records**: `.decisions/cdrs/` (CDRs) and `.decisions/adrs/` (ADRs)
+- **Philosophies**: `.decisions/phi/` (PHI-NNN — cross-project held opinions)
 
 ## Oracle Skills
 
 - `/oracle "[question]"` — Query the oracle at a decision point. Calls Hindsight `reflect` on the `oracle` bank.
-- `/oracle-capture "[decision]"` — Draft, review, and retain a CDR to the oracle bank and `.decisions/cdrs/`.
+- `/oracle-debate "[philosophy]"` — Draft, debate, and retain a PHI to the oracle bank and `.decisions/phi/`.
+- `/oracle-observe "[insight]"` — Capture an impromptu observation with fit-check reflect; retains as OBS-NNN.
+- `/oracle-synthesize` — Periodic synthesis: reflect across the corpus, curate, retain as OBS-NNN.
 
 Daemon runs on `http://localhost:9077` (claude-code profile). Start with:
 ```
@@ -56,7 +58,7 @@ At the end of every session, before closing:
    "
    ```
 
-3. **Capture any unrecorded decisions**: If decisions were made this session that are not yet in a CDR, run `/oracle-capture "[description]"` before closing.
+3. **Check for new patterns**: If a new cross-project philosophy or observation emerged this session, run `/oracle-debate` or `/oracle-observe` before closing. Skip if nothing meta-level surfaced.
 
 Session logs feed the Observation layer — Hindsight synthesizes patterns from them automatically over time.
 

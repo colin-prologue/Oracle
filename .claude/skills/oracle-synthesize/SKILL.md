@@ -1,13 +1,13 @@
 ---
 name: "oracle-synthesize"
-description: "Synthesize a new Observation from retained CDRs/ADRs via a reflect query — presents output for curation, then retains the confirmed result as OBS-NNN."
+description: "Synthesize a new Observation from retained PHIs/OBSs via a reflect query — presents output for curation, then retains the confirmed result as OBS-NNN."
 argument-hint: "Optional: override the default synthesis query"
 user-invocable: true
 ---
 
 # Oracle Synthesize
 
-Run a reflect query against the oracle bank to extract cross-CDR patterns, curate the output, and retain it as a new Observation (OBS-NNN).
+Run a reflect query against the oracle bank to extract cross-entry patterns, curate the output, and retain it as a new Observation (OBS-NNN).
 
 Use this for **periodic synthesis cycles** — generating a new observation from what's already in the corpus. For impromptu insights you want to integrate, use `/oracle-observe` instead.
 
@@ -19,7 +19,7 @@ $ARGUMENTS
 
 If `$ARGUMENTS` is provided, use it as the reflect query. Otherwise use the default:
 
-> *"What patterns define how I make architecture decisions? Cite specific CDR IDs (e.g., CDR-001) in your response to ground the synthesis."*
+> *"What patterns define how I make decisions? Cite specific PHI and OBS IDs (e.g., PHI-001, OBS-001) in your response to ground the synthesis."*
 
 ## Execution
 
@@ -31,7 +31,7 @@ curl -s http://localhost:9077/v1/default/banks/oracle/stats
 ```
 
 If `pending_operations > 0`, stop and tell the user:
-> **Daemon has pending operations — reflect may be incomplete. Wait for `pending_operations: 0` before synthesizing (CDR-004).**
+> **Daemon has pending operations — reflect may be incomplete. Wait for `pending_operations: 0` before synthesizing.**
 
 ### Step 2 — Determine next OBS-NNN ID
 
@@ -67,7 +67,7 @@ with urllib.request.urlopen(req, timeout=120) as resp:
 Replace `QUERY_HERE` with the query from Step 1.
 
 If the reflect returns empty or times out:
-> **Reflect returned no output — bank may have insufficient CDRs or daemon is under load. Do not retain.**
+> **Reflect returned no output — bank may have insufficient entries or daemon is under load. Do not retain.**
 
 ### Step 4 — Present for curation
 
@@ -83,10 +83,10 @@ Wait for the user's response. Accept edits. Do not proceed until the user confir
 
 ### Step 5 — Extract citations
 
-Parse the curated text for CDR/ADR/OBS identifiers using pattern `(CDR|ADR|OBS)-\d{3}`. These populate `metadata.derived_from`.
+Parse the curated text for PHI/OBS identifiers using pattern `(PHI|OBS)-\d{3}`. These populate `metadata.derived_from`.
 
-If fewer than 2 CDR/ADR identifiers are found, warn:
-> **Fewer than 2 CDR/ADR citations found — `derived_from` will be sparse. Proceed anyway?**
+If fewer than 2 identifiers are found, warn:
+> **Fewer than 2 PHI/OBS citations found — `derived_from` will be sparse. Proceed anyway?**
 
 Require explicit confirmation before continuing.
 
@@ -122,7 +122,6 @@ payload = {
         'document_id': obs_id,
         'metadata': {
             'type': 'observation',
-            'project': 'hindsight-decision-oracle',
             'date': datetime.date.today().isoformat(),
             'derived_from': ', '.join(derived_from),
             'query': query

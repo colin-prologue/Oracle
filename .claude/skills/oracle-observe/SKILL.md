@@ -1,6 +1,6 @@
 ---
 name: "oracle-observe"
-description: "Capture an impromptu observation — runs a fit-check reflect to find related OBS/CDR entries, then retains the insight as a new OBS-NNN with cross-references."
+description: "Capture an impromptu observation — runs a fit-check reflect to find related OBS/PHI entries, then retains the insight as a new OBS-NNN with cross-references."
 argument-hint: "The observation to capture (e.g. 'I always reach for X when Y')"
 user-invocable: true
 ---
@@ -9,7 +9,7 @@ user-invocable: true
 
 Capture an impromptu insight or pattern you've noticed — not derived from running a full synthesis cycle. Runs a fit-check reflect to find what's related in the corpus, then retains the observation as a new OBS-NNN with cross-references to related entries.
 
-Use this for **ad hoc capture** of insights noticed mid-session. For periodic synthesis from the full CDR corpus, use `/oracle-synthesize` instead.
+Use this for **ad hoc capture** of insights noticed mid-session. For periodic synthesis from the full corpus, use `/oracle-synthesize` instead.
 
 Note: the Hindsight API does not support updating document content in place. "Extending" an existing observation means creating a new OBS-NNN that cites the predecessor in `derived_from` — the original entry is preserved.
 
@@ -53,7 +53,7 @@ import json, urllib.request
 
 observation = 'OBSERVATION_HERE'
 
-query = f'I want to retain this observation: \"{observation}\". Where does it fit relative to existing entries in the bank? Does it reinforce, contradict, extend, or supersede any existing OBS-* or CDR-* entries? List the most relevant document IDs and describe the relationship.'
+query = f'I want to retain this observation: \"{observation}\". Where does it fit relative to existing entries in the bank? Does it reinforce, contradict, extend, or supersede any existing OBS-* or PHI-* entries? List the most relevant document IDs and describe the relationship.'
 
 payload = {'query': query, 'budget': 'mid'}
 req = urllib.request.Request(
@@ -103,7 +103,7 @@ Accept any edits. Do not proceed until confirmed.
 ### Step 6 — Confirm retention
 
 Assemble `derived_from`:
-- Any related CDR/ADR/OBS IDs the user confirmed from the fit analysis
+- Any related OBS/PHI IDs the user confirmed from the fit analysis
 - If this is a successor, include the predecessor OBS ID
 
 Show:
@@ -112,7 +112,7 @@ Show:
 >
 > **Content**: {curated text}
 > **derived_from**: {IDs, or empty if standalone}
-> **relationship**: {new / extends OBS-NNN / contradicts CDR-NNN}
+> **relationship**: {new / extends OBS-NNN / contradicts PHI-NNN}
 >
 > Retain to oracle bank?
 
@@ -136,7 +136,6 @@ payload = {
         'document_id': obs_id,
         'metadata': {
             'type': 'observation',
-            'project': 'hindsight-decision-oracle',
             'date': datetime.date.today().isoformat(),
             'derived_from': ', '.join(derived_from) if derived_from else '',
             'relationship': relationship,
