@@ -23,7 +23,7 @@ If `$ARGUMENTS` is empty, ask: "What philosophy do you want to capture?"
 
 Run:
 ```bash
-ls /Users/colindwan/Developer/Hindsight/.decisions/phi/ | grep -E '^PHI-[0-9]+' | sort | tail -1
+ls "$(pwd)/.decisions/phi/" 2>/dev/null | grep -E '^PHI-[0-9]+' | sort | tail -1
 ```
 
 Extract the number from the last filename (e.g., `PHI-002-...` → `2`). Next PHI number is `N+1`, zero-padded to 3 digits (e.g., `003`).
