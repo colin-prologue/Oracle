@@ -7,7 +7,7 @@ user-invocable: true
 
 # Oracle Query
 
-Query the Decision Oracle using Hindsight's `reflect` API. This synthesizes prior CDRs, ADRs, session logs, and the Decision Constitution into a direct answer to your decision question.
+Query the Decision Oracle using Hindsight's `reflect` API. This synthesizes prior PHIs, OBSs, session logs, and the Decision Constitution into a direct answer to your decision question.
 
 ## Arguments
 
@@ -42,10 +42,10 @@ If the curl command fails with a connection error:
 
 4. **Append a capture prompt** at the end of your response:
 
-> If this query surfaced a decision worth recording, capture it with `/oracle-capture "[brief description]"`.
+> If this query surfaced a decision worth recording, capture it with `/oracle-debate "[brief description]"`.
 
 ## Notes
 
-- The oracle answers from retained CDRs, ADRs, session logs, and the Decision Constitution mental model.
+- The oracle answers from retained PHIs, OBSs, session logs, and the Decision Constitution mental model.
 - If the bank is empty or has no relevant content, the oracle will say so — this is correct behavior, not an error.
 - Budget is set to `medium` for decision-point queries (gives better synthesis than `low`, avoids `high` latency).
