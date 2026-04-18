@@ -60,7 +60,7 @@ req = urllib.request.Request(
 )
 with urllib.request.urlopen(req, timeout=120) as resp:
     result = json.loads(resp.read())
-    print(result.get('response', result))
+    print(result.get('text', result))
 "
 ```
 

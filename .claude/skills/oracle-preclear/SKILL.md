@@ -65,7 +65,7 @@ req = urllib.request.Request(
     method='POST'
 )
 with urllib.request.urlopen(req, timeout=60) as resp:
-    print(json.loads(resp.read()).get('response', ''))
+    print(json.loads(resp.read()).get('text', ''))
 "
 ```
 
