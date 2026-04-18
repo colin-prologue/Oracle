@@ -280,13 +280,19 @@ and synthesis layer — PHI files are the canonical record, Hindsight makes them
 - [x] Removed `.decisions/adrs/` and `.decisions/cdrs/` — oracle has `.decisions/phi/` only
 - [x] Updated all skills to use PHI/OBS vocabulary
 
-### Phase 4 — External Hosting *(future)*
-- [ ] Expose oracle over a stable public URL so Claude.ai cloud sessions can reach it
-- [ ] Evaluate hosting options: Hindsight Cloud vs. self-hosted VPS vs. Fly.io/Railway
-- [ ] Migrate local PostgreSQL data to the hosted instance
-- [ ] Secure the endpoint (API key auth or IP allowlist)
-- [ ] Update `~/.hindsight/claude-code.json` `hindsightApiUrl` to point to remote instance
-- [ ] Retire the LaunchAgent once the remote instance is stable
+### Phase 4 — External Hosting *(out of scope — CLI-only by decision)*
+
+Oracle is scoped to Claude Code CLI sessions only. Desktop app (chat, cowork, code) and
+cloud/mobile sessions are explicitly excluded.
+
+**Why:** CLI hook events (`UserPromptSubmit`, `Stop`, `SessionEnd`) provide automatic,
+reliable recall/retain without any instruction-based workarounds. Desktop MCP integration
+requires instruction-driven recall — a weaker, less reliable substitute. The oracle's
+value comes from consistent, automatic pattern capture; partial coverage degrades that.
+
+**Revisit when:** Claude Desktop exposes lifecycle hooks equivalent to Claude Code's
+`UserPromptSubmit` / `Stop` events that MCP servers can subscribe to. Until then,
+CLI-only is the right scope.
 
 ### Phase 5 — SpecKit Integration *(pending Claude-Root SpecKit stabilization)*
 - [ ] Wire oracle hooks into SpecKit's extensions.yml at natural decision points
