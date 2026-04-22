@@ -1,7 +1,10 @@
+<!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
+
 ## PHI-002 — Persistence layers must outlive their consumers
 
 **Date:** 2026-04-13
 **Domain:** infrastructure, architecture
+**Source Project:** hindsight
 **Source:** CDR-005 — daemon lifecycle moved to macOS LaunchAgent
 
 ### Philosophy

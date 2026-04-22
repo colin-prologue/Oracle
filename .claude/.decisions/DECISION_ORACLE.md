@@ -196,8 +196,7 @@ you're working on.
 {What would change your mind}
 ```
 
-**Capture:** `/oracle-debate "[description]"` — drafts, debates, retains after confirmation.
-Files written to `.decisions/phi/PHI-{NNN}-{slug}.md`.
+**Capture:** `/oracle-debate "[description]"` or, at session end, `/oracle-preclear`. Both retain to the oracle bank first (canonical), then write the file to `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/PHI-{NNN}-{slug}.md`. **The file always lives in the Hindsight repo — never in the consumer project's working tree**, because a PHI is cross-project by definition and putting it in a consumer project conflates oracle artifacts with local project rules. Each file opens with an `ORACLE ARTIFACT` banner so it self-identifies if ever read from an unexpected path.
 
 **Filter:** Ask "Would this change my default in a new project with no prior context?" If yes → PHI.
 If it's ground truth for this project only → ADR in the project KB.
@@ -226,6 +225,7 @@ Session logs feed the Observation layer over time — Hindsight synthesizes patt
 | `/oracle-debate "[philosophy]"` | Draft, debate, and retain a PHI — semi-manual by design |
 | `/oracle-observe "[insight]"` | Capture impromptu observation with fit-check reflect; retains as OBS-NNN |
 | `/oracle-synthesize` | Periodic synthesis: reflect across corpus, curate, retain as OBS-NNN |
+| `/oracle-preclear` | End-of-session scan: proposes PHI/OBS candidates for approval, retains, writes session summary. Only retention path when using `/clear` |
 
 ---
 
@@ -248,8 +248,7 @@ Session logs feed the Observation layer over time — Hindsight synthesizes patt
   oracle-synthesize/ ← /oracle-synthesize periodic synthesis skill
 ```
 
-The `.decisions/phi/` folder is committed to the repo. The oracle bank is the retrieval
-and synthesis layer — PHI files are the canonical record, Hindsight makes them queryable.
+The `.decisions/phi/` folder is committed to **this** (Hindsight) repo. The oracle bank is source of truth; the files are browsable derivatives. Oracle skills resolve the PHI directory via `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/` so invocations from other projects still land files here, not in the caller's tree.
 
 ---
 

@@ -1,7 +1,10 @@
+<!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
+
 ## PHI-001 — Background services must be stateless and session-independent
 
 **Date:** 2026-04-09
 **Domain:** infrastructure, tooling
+**Source Project:** hindsight
 **Source:** CDR-001 / ADR-001 — hindsight-embed daemon auth cascade failure
 
 ### Philosophy

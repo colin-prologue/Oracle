@@ -1,7 +1,10 @@
+<!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
+
 ## PHI-005 — Reduce Activation Energy for Sustained Habits by Automating Extraction, Not Execution
 
 **Date:** 2026-04-18
 **Domain:** tooling / process
+**Source Project:** hindsight
 **Source:** oracle-observe required articulating the insight before capturing it. Sessions ended with `/clear` and nothing was retained because the habit required a non-trivial step (naming the pattern) that was easy to skip. oracle-preclear inverts this: Claude extracts candidates automatically, user approves or skips.
 
 ### Philosophy

@@ -6,12 +6,12 @@ This repo is the Decision Oracle — a persistent memory layer built on Hindsigh
 
 Key documents:
 - **Architecture & implementation guide**: `.claude/.decisions/DECISION_ORACLE.md`
-- **Philosophies**: `.decisions/phi/` (PHI-NNN — cross-project held opinions)
+- **Philosophies**: `.decisions/phi/` (PHI-NNN — cross-project held opinions). **Canonical location is this Hindsight repo**, resolved via `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/`. Oracle skills write here regardless of the session's working directory — PHI files must never land in a consumer project's tree.
 
 ## Oracle Skills
 
 - `/oracle "[question]"` — Query the oracle at a decision point. Calls Hindsight `reflect` on the `oracle` bank.
-- `/oracle-debate "[philosophy]"` — Draft, debate, and retain a PHI to the oracle bank and `.decisions/phi/`.
+- `/oracle-debate "[philosophy]"` — Draft, debate, and retain a PHI to the oracle bank and Hindsight's `.decisions/phi/`.
 - `/oracle-observe "[insight]"` — Capture an impromptu observation with fit-check reflect; retains as OBS-NNN.
 - `/oracle-synthesize` — Periodic synthesis: reflect across the corpus, curate, retain as OBS-NNN.
 - `/oracle-preclear` — **Run before `/clear`**. Scans the conversation, proposes PHI/OBS candidates for rapid approval, retains approved ones, writes session summary. No argument needed.

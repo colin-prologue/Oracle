@@ -10,6 +10,14 @@ Scan the current conversation and extract oracle-worthy content before running `
 
 **This is the only retention path when using `/clear`. PreCompact does not fire on `/clear`, only on `/compact`.**
 
+## Canonical locations
+
+PHIs are cross-project by definition, so canonical PHI files live in the Hindsight repo — **never** in the consumer project's working tree. Path resolution:
+
+- `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/`
+
+The oracle bank is the source of truth; the filesystem copy is a derivative. Retain to the bank **before** writing the file, so a mid-run auto-compact cannot orphan a file inside a project that does not own it.
+
 ## Execution
 
 ### Step 1 — Check daemon and gather orientation data
@@ -30,7 +38,10 @@ print('OBS IDs:', obs_ids)
 ```
 
 ```bash
-ls "$(pwd)/.decisions/phi/" 2>/dev/null | grep -E '^PHI-[0-9]+' | sort | tail -1
+HINDSIGHT_ROOT="${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}"
+test -d "$HINDSIGHT_ROOT/.decisions/phi" && \
+  ls "$HINDSIGHT_ROOT/.decisions/phi/" | grep -E '^PHI-[0-9]+' | sort | tail -1 || \
+  echo "MISSING: $HINDSIGHT_ROOT/.decisions/phi"
 ```
 
 ```bash
@@ -44,10 +55,14 @@ If daemon is unreachable, stop:
 > HINDSIGHT_API_EMBEDDINGS_LOCAL_FORCE_CPU=1 HINDSIGHT_API_RERANKER_LOCAL_FORCE_CPU=1 uvx hindsight-embed daemon start
 > ```
 
+If the PHI listing returns `MISSING: ...`, stop:
+
+> **Hindsight repo not found at `$HINDSIGHT_ROOT`.** Set `HINDSIGHT_ROOT` to the Hindsight repo path, or clone it to `~/Developer/Hindsight`. PHI files must live there, not in the current project.
+
 Compute from results:
 - **Next OBS-NNN**: highest OBS-NNN number + 1, zero-padded to 3 digits. Start at 001 if none.
-- **Next PHI-NNN**: extract number from last PHI filename (e.g. `PHI-003-...` → 3), add 1, zero-pad. Start at 001 if none.
-- **Project name**: from git remote slug or directory name.
+- **Next PHI-NNN**: extract number from last PHI filename in Hindsight's `.decisions/phi/` (e.g. `PHI-003-...` → 3), add 1, zero-pad. Start at 001 if none.
+- **Source project**: current project, from git remote slug or directory name. Recorded in the PHI metadata as its origin — the PHI itself applies cross-project.
 
 ### Step 2 — Orient on existing corpus
 
@@ -104,13 +119,56 @@ Process each approved candidate immediately after approval.
 
 Derive a filename slug from the title (lowercase, spaces to hyphens, strip punctuation).
 
-Write the canonical PHI file to `.decisions/phi/PHI-{NNN}-{slug}.md`:
+**Retain to oracle bank FIRST** (canonical store — if an auto-compact interrupts before the file write, the PHI is still safely captured).
+
+The `phi` content for the bank **must not include the `<!-- ORACLE ARTIFACT -->` banner** — that banner is a filesystem-only safeguard and adds retrieval noise if embedded. Build the bank content starting at the `## PHI-{NNN}` heading; add the banner only when writing the file in the next step.
+
+```bash
+python3 -c "
+import json, urllib.request, datetime
+
+phi = '''PHI_CONTENT_HERE'''  # starts at '## PHI-NNN ...' — no banner
+phi_id = 'PHI_ID_HERE'
+domain = 'DOMAIN_HERE'
+source_project = 'SOURCE_PROJECT_HERE'
+
+payload = {
+    'items': [{
+        'content': phi,
+        'context': 'philosophy',
+        'document_id': phi_id,
+        'metadata': {
+            'type': 'philosophy',
+            'domain': domain,
+            'date': datetime.date.today().isoformat(),
+            'source': 'oracle-preclear',
+            'source_project': source_project
+        }
+    }]
+}
+req = urllib.request.Request(
+    'http://localhost:9077/v1/default/banks/oracle/memories',
+    data=json.dumps(payload).encode(),
+    headers={'Content-Type': 'application/json'},
+    method='POST'
+)
+with urllib.request.urlopen(req, timeout=30) as resp:
+    print(json.dumps(json.loads(resp.read()), indent=2))
+"
+```
+
+**Then write the derivative file** to `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/PHI-{NNN}-{slug}.md` — **never** to the current project's directory. The file is a convenience copy for browsing; the bank is source of truth.
+
+The first line is a banner that self-identifies the file as an oracle artifact, so if the path is ever read from an unexpected location it cannot be mistaken for a local project rule:
 
 ```markdown
+<!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
+
 ## PHI-{NNN} — {title}
 
 **Date:** {YYYY-MM-DD}
 **Domain:** {architecture / tooling / process / infrastructure}
+**Source Project:** {project that surfaced this PHI — the philosophy itself is cross-project}
 **Source:** {what pattern in this session prompted this}
 
 ### Philosophy
@@ -129,39 +187,7 @@ Write the canonical PHI file to `.decisions/phi/PHI-{NNN}-{slug}.md`:
 {What would change your mind.}
 ```
 
-Then retain to oracle bank:
-
-```bash
-python3 -c "
-import json, urllib.request, datetime
-
-phi = '''PHI_CONTENT_HERE'''
-phi_id = 'PHI_ID_HERE'
-domain = 'DOMAIN_HERE'
-
-payload = {
-    'items': [{
-        'content': phi,
-        'context': 'philosophy',
-        'document_id': phi_id,
-        'metadata': {
-            'type': 'philosophy',
-            'domain': domain,
-            'date': datetime.date.today().isoformat(),
-            'source': 'oracle-preclear'
-        }
-    }]
-}
-req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/memories',
-    data=json.dumps(payload).encode(),
-    headers={'Content-Type': 'application/json'},
-    method='POST'
-)
-with urllib.request.urlopen(req, timeout=30) as resp:
-    print(json.dumps(json.loads(resp.read()), indent=2))
-"
-```
+Use the Write tool with an **absolute path** built from `$HINDSIGHT_ROOT` (or `$HOME/Developer/Hindsight`) — not `$(pwd)` and not a relative path. If the path does not resolve to the Hindsight repo, stop and surface the error.
 
 Increment the PHI counter before the next PHI candidate in this session.
 

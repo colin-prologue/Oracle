@@ -1,7 +1,10 @@
+<!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
+
 ## PHI-004 — Validate Safety Nets Against Actual Workflow, Not Intended Workflow
 
 **Date:** 2026-04-18
 **Domain:** process
+**Source Project:** hindsight
 **Source:** PreCompact hook was the designed fallback for oracle retention, but real workflow uses `/clear` which bypasses PreCompact entirely. The gap existed silently until we traced the full hook trigger map.
 
 ### Philosophy

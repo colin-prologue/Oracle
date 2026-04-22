@@ -1,7 +1,10 @@
+<!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
+
 ## PHI-003 — Prefer conscious capture over automatic retention
 
 **Date:** 2026-04-14
 **Domain:** tooling, oracle-design
+**Source Project:** hindsight
 **Source:** CDR-006 — oracle bank retain strategy: explicit capture only
 
 ### Philosophy
