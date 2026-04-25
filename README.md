@@ -191,7 +191,7 @@ Full philosophy rationale in `.decisions/phi/`.
 ## Roadmap
 
 - **Phase 4** — External hosting so cloud Claude sessions (claude.ai) can reach the oracle
-- **Phase 5** — SpecKit integration: oracle hooks at natural decision points during spec elaboration
+- **Phase 5** — ~~SpecKit integration~~ *(removed — covered by existing CLI hook events; no special integration needed)*
 - **Phase 6** — Multi-user bank evaluation for team contexts
 
 Current status and completed phases: `.decisions/DECISION_ORACLE.md`.
