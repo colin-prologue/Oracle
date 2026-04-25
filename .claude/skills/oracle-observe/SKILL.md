@@ -43,34 +43,52 @@ curl -s http://localhost:9077/v1/default/banks/oracle/documents
 
 Parse for `id` matching `OBS-\d+`. Find the highest. Next ID = highest + 1, zero-padded to 3 digits. If none exist, start at `OBS-001`.
 
-### Step 3 — Run fit-check reflect
+### Step 3 — Run fit-check via recall
 
-POST to reflect to find where this observation fits relative to existing entries:
+Use the observation text as a recall query to surface related entries.
+This used to call `/reflect` (paid-API LLM synthesis); it's now `/recall`
+(retrieval-only) — the parent skill assistant interprets the chunks
+directly in Step 4, so no subagent dispatch is needed.
+
+**Important:** `$ARGUMENTS` may contain shell-special characters
+(apostrophes, backticks, `$`). Do **not** embed it in any bash command
+line — the harness substitutes the text into the script body before
+bash parses it, so shell escaping does not protect you.
+
+**Step 3a — write the observation to a file via the `Write` tool**
+(not via shell). Target path: `/tmp/oracle_observation.txt`. Write only
+the `$ARGUMENTS` text as the file contents.
+
+**Step 3b — run the recall, reading the observation from that file:**
 
 ```bash
 python3 -c "
 import json, urllib.request
-
-observation = 'OBSERVATION_HERE'
-
-query = f'I want to retain this observation: \"{observation}\". Where does it fit relative to existing entries in the bank? Does it reinforce, contradict, extend, or supersede any existing OBS-* or PHI-* entries? List the most relevant document IDs and describe the relationship.'
-
-payload = {'query': query, 'budget': 'mid'}
+q = open('/tmp/oracle_observation.txt').read().rstrip('\n')
+payload = {'query': q, 'budget': 'mid', 'max_tokens': 4096}
 req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/reflect',
+    'http://localhost:9077/v1/default/banks/oracle/memories/recall',
     data=json.dumps(payload).encode(),
     headers={'Content-Type': 'application/json'},
     method='POST'
 )
-with urllib.request.urlopen(req, timeout=120) as resp:
-    result = json.loads(resp.read())
-    print(result.get('text', result))
+with urllib.request.urlopen(req, timeout=60) as resp:
+    d = json.loads(resp.read())
+    for r in d.get('results', [])[:10]:
+        doc = r.get('document_id') or '-'
+        kind = r.get('type', '?')
+        text = (r.get('text') or '').replace('\n', ' ')[:300]
+        print(f'{doc} ({kind}): {text}')
 "
 ```
 
-Replace `OBSERVATION_HERE` with the text from `$ARGUMENTS`.
-
 ### Step 4 — Present fit analysis
+
+Read the recall results from Step 3 and write a short narrative the user
+can act on. You (the calling skill assistant) produce this fit-analysis
+text directly — no subagent dispatch — citing specific PHI-NNN / OBS-NNN
+identifiers from the recall output (use `document_id` when present;
+otherwise extract IDs embedded in the body text).
 
 Show the user:
 
@@ -79,7 +97,9 @@ Show the user:
 > *Your observation*: {$ARGUMENTS}
 >
 > *Related entries found*:
-> {reflect output}
+> {your fit narrative — 2–4 sentences citing specific IDs and naming the
+> relationship: reinforces / extends / contradicts / supersedes /
+> orthogonal}
 >
 > **How should this be retained?**
 > - **New standalone OBS-{NNN}** — this is new ground not covered by existing entries

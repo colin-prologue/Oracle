@@ -42,40 +42,100 @@ curl -s http://localhost:9077/v1/default/banks/oracle/documents
 
 Parse the response for any `id` matching `OBS-\d+`. Find the highest number. Next ID is that number + 1, zero-padded to 3 digits. If none exist, start at `OBS-001`.
 
-### Step 3 — Run reflect query
+### Step 3 — Recall + synthesis subagent
 
-POST to reflect:
+Synthesis used to be a daemon-side `/reflect` call (paid API). It now
+runs as `/recall` (retrieval) + a Sonnet subagent dispatched from this
+session (subscription tokens). See
+`.claude/.decisions/CDR-subscription-llm-routing.md`.
+
+**Important:** `$ARGUMENTS` may contain shell-special characters
+(apostrophes, backticks, `$`). Do **not** embed it in any bash command
+line — the harness substitutes the text into the script body before
+bash parses it, so shell escaping does not protect you.
+
+**Step 3a — write the query to a file via the `Write` tool** (not via
+shell). Target path: `/tmp/oracle_synthesize_query.txt`. If `$ARGUMENTS`
+is non-empty, write its contents. Otherwise write the default query:
+
+> What patterns define how I make decisions? Cite specific PHI and OBS IDs (e.g., PHI-001, OBS-001) in your response to ground the synthesis.
+
+**Step 3b — recall a wide spread of corpus entries** for the subagent:
+
 ```bash
 python3 -c "
 import json, urllib.request
-
-query = 'QUERY_HERE'
-
-payload = {'query': query, 'budget': 'high'}
+q = open('/tmp/oracle_synthesize_query.txt').read().rstrip('\n')
+payload = {'query': q, 'budget': 'high', 'max_tokens': 8192}
 req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/reflect',
+    'http://localhost:9077/v1/default/banks/oracle/memories/recall',
     data=json.dumps(payload).encode(),
     headers={'Content-Type': 'application/json'},
     method='POST'
 )
-with urllib.request.urlopen(req, timeout=120) as resp:
-    result = json.loads(resp.read())
-    print(result.get('text', result))
-"
+with urllib.request.urlopen(req, timeout=60) as resp:
+    d = json.loads(resp.read())
+    slim = []
+    for r in d.get('results', [])[:20]:
+        item = {k: r.get(k) for k in ('text', 'type', 'document_id', 'mentioned_at', 'metadata') if r.get(k) is not None}
+        slim.append(item)
+    print(json.dumps(slim))
+" > /tmp/oracle_synthesize_recall.json
 ```
 
-Replace `QUERY_HERE` with the query from Step 1.
+If the recall result is empty:
+> **Recall returned no entries — bank may have insufficient content. Do not retain.**
 
-If the reflect returns empty or times out:
-> **Reflect returned no output — bank may have insufficient entries or daemon is under load. Do not retain.**
+**Step 3c — dispatch a synthesis subagent** via the `Agent` tool with:
+
+- `subagent_type`: `general-purpose`
+- `model`: `sonnet`
+- `description`: `Oracle synthesis (cross-corpus pattern)`
+- `prompt`: a self-contained brief built from the template below.
+  Read `/tmp/oracle_synthesize_query.txt` (the query) and
+  `/tmp/oracle_synthesize_recall.json` (the corpus sample) into the
+  prompt body inline.
+
+Synthesis brief template:
+
+```
+You are running a periodic synthesis cycle for the Decision Oracle. The
+oracle models Colin's cross-project decision-making philosophies and
+patterns. Its bank holds PHIs (philosophies — held opinions) and OBSs
+(observed patterns) extracted from prior sessions.
+
+This is not a decision-point query. The output will be retained as a new
+Observation (OBS-NNN) in the bank itself, so it must be a distilled
+pattern statement, not an answer.
+
+Synthesis query:
+{QUERY}
+
+Corpus sample (top 20 entries by relevance, JSON):
+{RESULTS_JSON}
+
+Write a markdown OBS body that:
+- distills a *cross-entry pattern* — a recurring instinct, constraint,
+  or tradeoff visible across multiple entries — not a summary of one
+  entry;
+- cites at least 2 specific PHI-NNN / OBS-NNN identifiers in the body
+  text. Use `document_id` for `experience`-type entries; for
+  `observation`-type entries the IDs are usually embedded in the body
+  (e.g., "PHI-005 principle…"). Do not invent IDs;
+- is suitable for direct retention (no preamble, no meta-commentary, no
+  trailing orientation block);
+- stays under ~200 words;
+- if the corpus sample is too thin or off-topic to support a real
+  synthesis, say so plainly in one sentence and stop — do not pad.
+```
 
 ### Step 4 — Present for curation
 
-Show the raw reflect output and ask:
+Show the subagent's synthesized output verbatim and ask:
 
 > **Review this synthesized Observation before retention:**
 >
-> {reflect output}
+> {subagent output}
 >
 > Edit as needed. The curated version will be retained as {OBS-NNN}.
 

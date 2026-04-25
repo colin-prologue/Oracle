@@ -64,25 +64,36 @@ Compute from results:
 - **Next PHI-NNN**: extract number from last PHI filename in Hindsight's `.decisions/phi/` (e.g. `PHI-003-...` → 3), add 1, zero-pad. Start at 001 if none.
 - **Source project**: current project, from git remote slug or directory name. Recorded in the PHI metadata as its origin — the PHI itself applies cross-project.
 
-### Step 2 — Orient on existing corpus
+### Step 2 — Orient on existing corpus via recall
 
-Run a low-budget reflect to know what's already captured, so candidates don't duplicate:
+Pull a representative sample of retained entries so Step 3 can dedupe
+candidates against what's already captured. This used to call `/reflect`
+(daemon-side LLM synthesis on the paid API). It's now a `/recall` call
+(retrieval-only) — the raw entries are better dedup signal than a
+reflected summary, and we save the synthesis token cost.
 
 ```bash
 python3 -c "
 import json, urllib.request
-
-payload = {'query': 'List all PHI and OBS principles currently captured in the oracle bank. One line per entry with its ID.', 'budget': 'low'}
+payload = {'query': 'philosophies and observed patterns retained in the oracle bank', 'budget': 'mid', 'max_tokens': 4096}
 req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/reflect',
+    'http://localhost:9077/v1/default/banks/oracle/memories/recall',
     data=json.dumps(payload).encode(),
     headers={'Content-Type': 'application/json'},
     method='POST'
 )
 with urllib.request.urlopen(req, timeout=60) as resp:
-    print(json.loads(resp.read()).get('text', ''))
+    d = json.loads(resp.read())
+    for r in d.get('results', [])[:15]:
+        doc = r.get('document_id') or '-'
+        kind = r.get('type', '?')
+        text = (r.get('text') or '').replace('\n', ' ')[:240]
+        print(f'{doc} ({kind}): {text}')
 "
 ```
+
+Use the resulting list as context for Step 3 — when proposing candidates,
+dedupe against entries that overlap on theme.
 
 ### Step 3 — Scan conversation and propose candidates
 
