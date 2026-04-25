@@ -33,7 +33,64 @@ Surviving branches:
 
 ## Task A — Bank Legacy Cleanup
 
-_(populated during Task A execution)_
+### A1 — DELETE endpoint verification
+
+- WRITE result: `200 success=True`
+- DELETE result: `200 {"success":true,"document_id":"DELETE_PROBE_001","memory_units_deleted":0}`
+- GET-after-delete: `404`
+- Verdict: endpoint usable; idempotent
+
+### A2 — Candidate inventory
+
+| ID | type | date | len | title |
+|---|---|---|---|---|
+| `08b56c2d-...` | session-log | 2026-04-21 | 763 | (no heading) |
+| `db0c6031-...` | session-log | 2026-04-21 | 1421 | (no heading) |
+| `3879f855-...` | session-log | 2026-04-21 | 1890 | (no heading) |
+| `681ecce2-...` | session-log | 2026-04-18 | 987 | (no heading) |
+| `63d3dca1-...` | session-log | 2026-04-18 | 964 | (no heading) |
+| `36f3f9e5-...` | session-log | 2026-04-14 | 707 | (no heading) |
+| `d00566fc-...` | session-log | 2026-04-14 | 1014 | (no heading) |
+| `CDR-007` | cdr | 2026-04-14 | 2824 | Two-skill observation capture |
+| `CDR-006` | cdr | 2026-04-13 | 2352 | Oracle bank retain strategy |
+| `CDR-005` | cdr | 2026-04-13 | 3014 | Daemon lifecycle to LaunchAgent |
+| `cli_put_20260412_205253` | (none) | (none) | 2478 | CDR-004 — Haiku TPM contention |
+| `cli_put_20260410_010327` | (none) | (none) | 2642 | ADR-001 — key-based LLM provider |
+| `cli_put_20260409_230320` | (none) | (none) | 1125 | CDR-003 — plugin config location |
+| `cli_put_20260409_225328` | (none) | (none) | 1677 | CDR-002 — macOS CPU-forcing flags |
+| `cli_put_20260409_225306` | (none) | (none) | 1793 | CDR-001 — key-based LLM provider |
+| `cli_put_20260409_224102` | (none) | (none) | 4 | (4 chars, junk) |
+
+Plan assumed UUID records were autoRetain detritus; actual content shows they are session-logs. Plan assumed `cli_put_*` were test artifacts; actual content shows 5 are substantive CDR/ADR records and only 1 is junk. Re-classified accordingly before oracle query.
+
+### A3 — Classification (oracle-mediated)
+
+Auto-rule: `cli_put_20260409_224102` (4 chars) → **delete** (no content).
+
+Oracle query: see [Oracle Queries](#oracle-queries) section. Per-record verdicts:
+
+| ID | verdict | reason |
+|---|---|---|
+| `CDR-005` | keep | Implementation detail beyond PHI-002 (LaunchAgent specifics, idle config) |
+| `CDR-006` | keep | Implementation detail beyond PHI-003 (TPM contention, pending_operations) |
+| `CDR-007` | keep | Two-skill split decision; no PHI counterpart |
+| `cli_put_20260412_205253` (CDR-004) | keep | Haiku TPM constraint, not covered by any PHI |
+| `cli_put_20260410_010327` (ADR-001) | **delete** | Duplicate of CDR-001 |
+| `cli_put_20260409_230320` (CDR-003) | keep | Plugin config location knowledge |
+| `cli_put_20260409_225328` (CDR-002) | keep | macOS MPS / Python 3.14 platform constraint |
+| `cli_put_20260409_225306` (CDR-001) | keep | Validates PHI-001 empirically |
+| All 7 UUID session-logs | **delete** | Signal/noise per PHI-003; reflect contamination; alternative is sample preservation but oracle judges no current value |
+| `cli_put_20260409_224102` (4 chars) | **delete** | Auto-rule (junk) |
+
+Total: 9 deletions, 7 kept (legacy by intent), 7 PHIs + 5 OBSs untouched.
+
+### A4 — Deletion results
+
+- Pre-deletion total: 28 docs
+- Post-deletion total: 19 docs
+- Memory units pruned: 43 (sessions had 5–8 each; cli_put_* deletions removed 0 since they were never extracted)
+- All 9 deletions returned HTTP 200; no failures.
+- Surviving IDs: PHI-001..007, OBS-001..005, CDR-005/006/007, cli_put_20260409_225306 (CDR-001), cli_put_20260409_225328 (CDR-002), cli_put_20260409_230320 (CDR-003), cli_put_20260412_205253 (CDR-004) — 19 records, all PHI/OBS or kept-by-oracle-judgment legacy CDRs.
 
 ## Task B — Hook-Firing Test Harness
 
@@ -41,7 +98,18 @@ _(populated during Task B execution)_
 
 ## Oracle Queries
 
-_(append each `/oracle "[question]"` invocation here with the question, the recommendation derived, and the action taken)_
+### Q1 — Bank cleanup (CDR + session-log fates)
+
+**Asked at:** Task A3, 2026-04-25.
+**Question summary:** For each pre-rename CDR/ADR record (some stored as `CDR-NNN`, some as `cli_put_*`) and each UUID-named session-log, recommend keep or delete given existing PHI-001..007 and OBS-001..005 in the bank.
+
+**Oracle recommendation (verbatim, abridged):**
+
+> GROUP A — keep CDR-005/006/007 (implementation details extending PHI-002/003), keep CDR-001/002/003/004 (cli_put_* substantive), delete cli_put_20260410_010327 (ADR-001 duplicate of CDR-001).
+>
+> GROUP B (session logs) — DELETE ALL. Signal/noise per PHI-003; competes with PHI/OBS during reflect; "Archive, Don't Retain" — preserve in separate bank with disabled reflect indexing if retrospective tracing needed, not active oracle bank.
+
+**Action taken:** Accepted recommendation in full. 1 ADR-1 duplicate + 7 session logs deleted; 7 substantive CDRs preserved. Plus 1 auto-rule deletion (4-char junk). Total: 9 deletions.
 
 ## Final Summary
 
