@@ -167,3 +167,33 @@ f92045d feat(hooks): execute command-type hooks with synthesized payloads
 ### Oracle queries
 
 1. CDR + session-log fates (logged above) — verdict accepted in full.
+
+---
+
+## Second pass — CDR vocabulary reconciliation (2026-04-25 02:36)
+
+The first audit pass kept 7 legacy CDR records on the oracle's "unique implementation knowledge" reasoning. On reflection that conflicted with the oracle's own scope rule (`DECISION_ORACLE.md`: "Oracle stores meta-patterns only, not project-specific ADRs") and the 2026-04-15 vocabulary alignment (CDR → PHI). All 7 are out of scope for the bank under the established rules and were deleted.
+
+Reclassification:
+
+| ID | Title | Reason for delete |
+|---|---|---|
+| `CDR-001` / `cli_put_20260409_225306` | claude-code rejection | Subsumed by PHI-001 (stateless services) |
+| `CDR-005` | Daemon lifecycle to LaunchAgent | Subsumed by PHI-002 (persistence outlives consumers) |
+| `CDR-006` | Retain strategy: explicit only | Subsumed by PHI-003 (conscious capture) |
+| `CDR-002` / `cli_put_20260409_225328` | macOS CPU-forcing flags | Project-specific ADR (Hindsight); already tracked in that project |
+| `CDR-003` / `cli_put_20260409_230320` | Plugin config location | Project-specific ADR (Hindsight); already tracked in that project |
+| `CDR-004` / `cli_put_20260412_205253` | Haiku TPM contention | Project-specific ADR (Hindsight); already tracked in that project |
+| `CDR-007` | Two-skill obs-capture split | Hindsight-internal architecture decision; documented in `DECISION_ORACLE.md` skills table |
+
+Bank: 22 → 15 docs (49 memory units pruned). Final state: 9 PHIs + 6 OBSs, no legacy clutter.
+
+### Session retentions (oracle-preclear)
+
+Three new records retained from this session's oracle-preclear pass:
+
+- **PHI-008** — Cross-project artifacts live in their owning repo, not the consumer's tree
+- **PHI-009** — Write to the durable store first; the other copy is a derivative
+- **OBS-006** — Category-error bugs come in clusters; inventory before declaring done
+
+PHI-008 and PHI-009 files are committed to `.decisions/phi/` in this branch.
