@@ -1,6 +1,6 @@
 ---
 name: "oracle"
-description: "Query the Decision Oracle — retrieves relevant PHIs/OBSs from the oracle bank, then synthesizes a direct answer to your decision question."
+description: "Use BEFORE recommending an architectural approach, choosing between technologies, evaluating a tradeoff, or when the user proposes a design — queries Colin's cross-project Decision Oracle (PHIs/OBSs from prior sessions) and synthesizes a direct answer with cited prior philosophies. Empty results are a valid signal, not a failure. Also invoked explicitly via /oracle \"[question]\"."
 argument-hint: "Your decision question"
 user-invocable: true
 ---

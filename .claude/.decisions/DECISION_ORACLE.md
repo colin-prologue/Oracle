@@ -308,6 +308,20 @@ SpecKit remains a development tool used in this repo; nothing about that changes
 - [ ] Evaluate multi-user bank setup
 - [ ] Consider Hindsight Cloud for shared access without self-hosting overhead
 
+### Phase 7 — Organic Invocation & Cross-Tool Query *(in progress, 2026-04-25)*
+
+Goal: make oracle queries fire organically at decision moments, and extend query access to Codex sessions. Capture (debate/observe/synthesize/preclear) stays explicit per PHI-003 — this phase only touches the read path.
+
+**In sequence:**
+- [ ] Rewrite `/oracle` skill `description` as a trigger condition (when to use, not what it does); add reinforcing one-liner in CLAUDE.md
+- [ ] Add a relevance floor to the daemon recall path so reflect can return empty rather than padding answers with mid-confidence noise (protects against the same signal-degradation pattern PHI-003 prevents on the write side)
+- [ ] Build an MCP `oracle_query` server wrapping the daemon's recall endpoint; register globally in `~/.codex/config.toml` with the same trigger-condition phrasing on the tool description; add matching nudge in `~/.codex/AGENTS.md`
+
+**Future exploration (not yet scoped):**
+- [ ] **Context-threshold preclear nudge** — hook or signal that detects approaching context limits and recommends `/oracle-preclear` before the user runs out of room. Goal: ensure the best context gets captured rather than lost to compaction. Open question: is this a CC-side hook, a Stop-event check, or a token-count threshold?
+- [ ] **Keyword-triggered capture nudge** — detect signals like "remember", "worth recording", "decision worth keeping" in user messages and surface a recommendation to invoke `/oracle-debate` or `/oracle-observe`. Must not collide with CLAUDE.md's "remember" semantics (those write to user-memory files, not the oracle bank). Open question: scope of trigger vocabulary, and whether the nudge fires inline or queues for next pause.
+- [ ] **Query/answer log + review ritual** — append `{question, answer, cited_ids, timestamp, project}` to a JSONL log under `.decisions/queries/` on every `/oracle` invocation. Periodic review surfaces two signals: (a) *synthesis quality* — was the answer good or did the subagent reach for weak citations to justify any answer? (b) *PHI freshness* — do cited philosophies still hold? Citation counts alone are insufficient because they don't distinguish load-bearing citation from desperate reach; the question text is what reveals whether the bank is being asked questions it can't actually answer. Review must NOT auto-create OBSes (PHI-003 / Pattern 9 — autoRetain failure mode); it can only *recommend* fine-tuning existing entries, deprecating zero-value ones, or proposing new PHIs/OBSs from recurring question patterns. Likely pairs with the relevance-floor work since the log is exactly the empirical data needed to calibrate the floor.
+
 ---
 
 ## Key Architectural Decisions

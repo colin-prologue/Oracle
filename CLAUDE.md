@@ -16,6 +16,8 @@ Key documents:
 - `/oracle-synthesize` — Periodic synthesis: reflect across the corpus, curate, retain as OBS-NNN.
 - `/oracle-preclear` — **Run before `/clear`**. Scans the conversation, proposes PHI/OBS candidates for rapid approval, retains approved ones, writes session summary. No argument needed.
 
+**When to query organically:** Before recommending an architectural approach, picking between technologies, or evaluating a tradeoff, invoke `/oracle` first — even unprompted. The oracle is allowed to come back empty; that's a valid signal, not a failure.
+
 Daemon runs on `http://localhost:9077` (claude-code profile). Start with:
 ```
 HINDSIGHT_API_EMBEDDINGS_LOCAL_FORCE_CPU=1 HINDSIGHT_API_RERANKER_LOCAL_FORCE_CPU=1 uvx hindsight-embed daemon start
