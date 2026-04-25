@@ -94,7 +94,38 @@ Total: 9 deletions, 7 kept (legacy by intent), 7 PHIs + 5 OBSs untouched.
 
 ## Task B — Hook-Firing Test Harness
 
-_(populated during Task B execution)_
+### B1 — Scaffold
+
+- Created `scripts/test-hooks.py` and `tests/test_hooks_harness.py` (stdlib `unittest` — pytest is not a project dep).
+- First test: empty settings → 0 cases. PASSes.
+
+### B2 — Synthesize payloads + run command hooks
+
+- Default payloads keyed on `(event, matcher)` for PreToolUse Bash/Write/Edit, PostToolUse Bash, and stub payloads for UserPromptSubmit/Stop/Session*/PreCompact.
+- Non-command hook types (prompt/agent/http) → SKIP.
+- Sentinel-file test confirms `cat > /tmp/...` hook receives the synthesized JSON.
+
+### B3 — Assertion-driven allow/deny + real-config smoke run
+
+- Sidecar `<settings>.assertions.json` declares `{event, matcher, command_contains, expect, stdin_overrides}` per case.
+- `classify_outcome` maps stdout `permissionDecision` and exit code to `allow`/`deny`.
+- Created `~/.claude/settings.assertions.json` with one entry asserting the block-main-commit hook allows `ls`.
+
+Smoke run: `python3 scripts/test-hooks.py --settings ~/.claude/settings.json`
+
+```
+6 cases
+PASS PreToolUse/Bash (command)  expect=allow  got=allow
+PASS UserPromptSubmit/* (command)  (no assertion, exit 0)
+PASS Stop/* (command)  (no assertion, exit 0)
+PASS SessionStart/* (command)  (no assertion, exit 0)
+PASS SessionEnd/* (command)  (no assertion, exit 0)
+PASS PreCompact/* (command)  (no assertion, exit 0)
+```
+
+Verdict: 6/6 PASS. The block-main-commit hook correctly allows non-git commands. All 5 hindsight-memory python hooks tolerate the harness's stub payloads without erroring — useful resilience signal.
+
+Limitation logged: `match_assertion` returns the FIRST match. To exercise both the deny-on-main case and the escape-hatch case for the same hook, the harness would need either multi-match support or repeated invocations with different `stdin_overrides`. Marked YAGNI — single allow-case assertion already closes the PHI-004 loop for the new commit hook (existence + minimal payload sanity). Deny-case validation is exercised by unit tests, not the real-config sidecar.
 
 ## Oracle Queries
 
