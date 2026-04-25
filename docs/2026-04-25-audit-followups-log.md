@@ -144,4 +144,26 @@ Limitation logged: `match_assertion` returns the FIRST match. To exercise both t
 
 ## Final Summary
 
-_(populated at end-of-session — counts, what was deleted, what was kept, what shipped)_
+- **Task C (branch hygiene):** 1 local + 1 remote branch removed (`001-oracle-hook-skills`); 3 stale remote refs auto-pruned by `git fetch --prune`. Final state: `main`, `005-audit-followups` only.
+- **Task A (bank cleanup):** 28 → 19 docs. Deleted 9 records (7 session-logs + 1 ADR-001 duplicate + 1 4-char junk), 43 memory units pruned. Kept 7 PHIs, 5 OBSs, and 7 legacy CDR records (CDR-005/006/007 + 4 cli_put_*-stored CDRs) on oracle's recommendation that each captures unique implementation knowledge not subsumed by current PHIs.
+- **Task B (hook-firing harness):** Shipped `scripts/test-hooks.py`, `tests/test_hooks_harness.py`, `scripts/README.md`, `~/.claude/settings.assertions.json`. Real-config smoke run shows 6/6 PASS across all configured hooks (block-main-commit + 5 hindsight-memory hooks). Closes PHI-004's aspirational-drift gap for the new commit hook.
+
+### Commits on this branch
+
+```
+fdc60e7 feat(hooks): allow/deny assertions + smoke run against real config
+f92045d feat(hooks): execute command-type hooks with synthesized payloads
+9b88dc8 feat(hooks): scaffold hook-firing test harness
+64cea09 chore(oracle): prune legacy bank records (CDR/UUID/cli_put detritus)
+711e65f chore(branches): clean up merged feature branches + seed audit-followups log
+```
+
+### Outstanding / out-of-scope
+
+- Multi-case matching in the harness (`match_assertion` returns first match) — YAGNI; revisit if multiple cases per (event, matcher) become a real need.
+- Non-command hook execution (prompt/agent/http) — none currently configured; harness reports SKIP correctly.
+- `~/.claude/settings.assertions.json` lives at user-global path, not in the Hindsight repo. Consider moving to a versioned location if you want assertions to travel with the project; currently it's a personal config artifact.
+
+### Oracle queries
+
+1. CDR + session-log fates (logged above) — verdict accepted in full.
