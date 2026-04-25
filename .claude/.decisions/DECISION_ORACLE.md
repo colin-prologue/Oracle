@@ -293,11 +293,16 @@ value comes from consistent, automatic pattern capture; partial coverage degrade
 `UserPromptSubmit` / `Stop` events that MCP servers can subscribe to. Until then,
 CLI-only is the right scope.
 
-### Phase 5 — SpecKit Integration *(pending Claude-Root SpecKit stabilization)*
-- [ ] Wire oracle hooks into SpecKit's extensions.yml at natural decision points
-- [ ] Oracle owns the integration hooks — SpecKit executes them, doesn't know about oracle
-- [ ] Hook at `before_implement`: oracle recall — surface relevant PHIs for the feature
-- [ ] Hook at `after_specify`: oracle-observe reminder — prompt if meta-pattern emerged
+### Phase 5 — SpecKit Integration *(removed)*
+
+Removed 2026-04-25. The original plan was to wire oracle hooks into SpecKit's
+extension surface so prior PHIs would surface automatically at spec/plan/implement
+decision points. That bridge is solved elsewhere — oracle and SpecKit interoperate
+via the existing CLI hook events (`UserPromptSubmit` recall, `Stop`/`SessionEnd`
+retain) which fire during SpecKit commands the same as any other interaction. No
+SpecKit-specific integration is needed.
+
+SpecKit remains a development tool used in this repo; nothing about that changes.
 
 ### Phase 6 — Team Extension *(future)*
 - [ ] Evaluate multi-user bank setup
