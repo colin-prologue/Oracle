@@ -38,6 +38,28 @@ class HarnessTests(unittest.TestCase):
                 msg=f"unexpected output: {out}",
             )
 
+    def test_command_hook_runs_with_synthesized_payload(self):
+        with tempfile.TemporaryDirectory() as td:
+            sentinel = Path(td) / "fired.txt"
+            settings = Path(td) / "settings.json"
+            settings.write_text(json.dumps({
+                "hooks": {
+                    "PreToolUse": [{
+                        "matcher": "Bash",
+                        "hooks": [{
+                            "type": "command",
+                            "command": f"cat > {sentinel}",
+                        }],
+                    }],
+                },
+            }))
+            code, out, err = run_harness([settings])
+            self.assertEqual(code, 0, msg=f"stderr={err}")
+            self.assertTrue(sentinel.exists(), "hook command did not run")
+            payload = json.loads(sentinel.read_text())
+            self.assertEqual(payload["tool_name"], "Bash")
+            self.assertIn("command", payload["tool_input"])
+
 
 if __name__ == "__main__":
     unittest.main()
