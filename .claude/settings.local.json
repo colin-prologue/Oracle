@@ -78,7 +78,9 @@
       "Bash(uv --version)",
       "Bash(uv run *)",
       "Bash(echo \"exit: $?\")",
-      "Bash(tee /tmp/oracle_recall.json)"
+      "Bash(tee /tmp/oracle_recall.json)",
+      "Bash(xargs -r git branch -d)",
+      "Bash(chmod +x /Users/colindwan/Developer/Hindsight/scripts/precompact_oracle_nudge.py)"
     ]
   }
 }
