@@ -77,7 +77,8 @@
       "Bash(uvx --help)",
       "Bash(uv --version)",
       "Bash(uv run *)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(tee /tmp/oracle_recall.json)"
     ]
   }
 }
