@@ -91,6 +91,20 @@ curl -s -X POST "http://localhost:9077/v1/default/banks/oracle/memories/recall" 
    Retrieved memories from the oracle bank (most relevant first):
    {RESULTS_JSON}
 
+   RELEVANCE GATE — apply this BEFORE writing anything else:
+   Read each retrieved entry against the decision question. If none is
+   genuinely relevant (i.e., addresses the question's actual subject
+   matter, not just sharing surface keywords or topic-adjacent themes),
+   respond with EXACTLY this single line and nothing else:
+
+   The oracle has no entries relevant to that question.
+
+   Do not soften, qualify, or pad. Do not summarize what was retrieved.
+   Do not list near-misses. Returning empty is the correct answer when
+   the bank holds no signal — empty results are a valid, accepted outcome.
+
+   If at least one entry is genuinely relevant, proceed to synthesis.
+
    Write a direct markdown answer to the decision question that:
    - cites specific PHI-NNN / OBS-NNN identifiers where relevant —
      `document_id` carries them for `experience`-type entries, but
