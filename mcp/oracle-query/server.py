@@ -19,6 +19,10 @@ skill so behavior is consistent across clients.
 from __future__ import annotations
 
 import json
+import os
+import re
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -27,6 +31,7 @@ from mcp.server.fastmcp import FastMCP
 DAEMON_URL = "http://localhost:9077/v1/default/banks/oracle/memories/recall"
 TOP_K = 10
 TIMEOUT_SECONDS = 30.0
+ID_PATTERN = re.compile(r"\b(?:PHI|OBS)-\d{3,}\b")
 
 RELEVANCE_GATE = (
     "RELEVANCE GATE — read each entry against the user's question. If none "
@@ -42,6 +47,42 @@ RELEVANCE_GATE = (
 )
 
 mcp = FastMCP("oracle")
+
+
+def _log_query(question: str, results: list[dict[str, Any]], empty: bool) -> None:
+    """Append a query entry to the canonical queries log.
+
+    Codex doesn't pass the synthesized answer back to this server, so the
+    MCP schema differs from the CC skill schema: we log `available_ids` (PHI/OBS
+    IDs in the returned results) instead of `cited_ids` (IDs in the answer).
+    Failures are swallowed — logging must not break the tool call.
+    """
+    try:
+        root = Path(os.environ.get("HINDSIGHT_ROOT", str(Path.home() / "Developer" / "Hindsight")))
+        log_dir = root / ".decisions" / "queries"
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        available: set[str] = set()
+        for item in results:
+            doc_id = item.get("document_id")
+            if doc_id:
+                available.add(doc_id)
+            available.update(ID_PATTERN.findall(item.get("text", "")))
+
+        entry = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "client": "codex-mcp",
+            "question": question,
+            "result_count": len(results),
+            "empty": empty,
+            "available_ids": sorted(available),
+        }
+        month = datetime.now(timezone.utc).strftime("%Y-%m")
+        log_file = log_dir / f"{month}.jsonl"
+        with log_file.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:  # noqa: BLE001 — logging must never break tool execution
+        pass
 
 
 @mcp.tool()
@@ -88,8 +129,10 @@ async def oracle_query(question: str) -> str:
         slim.append(entry)
 
     if not slim:
+        _log_query(question, [], empty=True)
         return "The oracle has no entries relevant to that question."
 
+    _log_query(question, slim, empty=False)
     return json.dumps(
         {"instructions": RELEVANCE_GATE, "results": slim},
         ensure_ascii=False,
