@@ -47,7 +47,7 @@ If `$ARGUMENTS` is empty, ask the user: "What decision are you facing?"
 python3 -c 'import json; q=open("/tmp/oracle_q.txt").read().rstrip("\n"); print(json.dumps({"query": q, "budget": "mid", "max_tokens": 4096}))' > /tmp/oracle_payload.json
 curl -s -X POST "http://localhost:9077/v1/default/banks/oracle/memories/recall" \
   -H "Content-Type: application/json" \
-  -d @/tmp/oracle_payload.json
+  -d @/tmp/oracle_payload.json | tee /tmp/oracle_recall.json
 ```
 
    If the curl command fails with a connection error:
@@ -128,7 +128,27 @@ curl -s -X POST "http://localhost:9077/v1/default/banks/oracle/memories/recall" 
 
 5. **Render the subagent's response directly to the user.**
 
-6. **Append a capture prompt** at the end:
+6. **Log the query.** Append a single JSONL line to the canonical
+   queries log so future review can calibrate trigger/gate behavior and
+   surface PHI freshness signals. Empty-result queries are logged too —
+   their absence would defeat the calibration purpose.
+
+   **Important — same shell-escape concern as step 2.** The question
+   AND answer text may contain shell-special characters. Do not embed
+   either in a bash command line. Use the `Write` tool to stage the
+   answer text to `/tmp/oracle_answer.txt` (the question is already at
+   `/tmp/oracle_q.txt`, the recall response at `/tmp/oracle_recall.json`),
+   then invoke the logger script:
+
+```bash
+python3 "${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/scripts/log_oracle_query.py" \
+  --client claude-code \
+  --question-file /tmp/oracle_q.txt \
+  --answer-file /tmp/oracle_answer.txt \
+  --recall-file /tmp/oracle_recall.json
+```
+
+7. **Append a capture prompt** at the end:
 
    > If this query surfaced a decision worth recording, capture it with
    > `/oracle-debate "[brief description]"`.
