@@ -31,7 +31,7 @@ HINDSIGHT_API_EMBEDDINGS_LOCAL_FORCE_CPU=1 HINDSIGHT_API_RERANKER_LOCAL_FORCE_CP
 /oracle-preclear
 ```
 
-This scans the current conversation, proposes PHI/OBS candidates for rapid yes/skip approval, retains approved ones, and writes the session summary — all without requiring you to prompt it. `/clear` does not trigger PreCompact, so this is the only retention path.
+This scans the current conversation, proposes PHI/OBS candidates for rapid yes/skip approval, retains approved ones, and writes the session summary — all without requiring you to prompt it. `/clear` does not trigger PreCompact, so this is the only retention path for that case. (Auto-compaction is now intercepted by the `PreCompact` hook in `.claude/settings.json`, which blocks auto-compact and surfaces the same nudge.)
 
 Use `/oracle-debate "[philosophy]"` or `/oracle-observe "[insight]"` mid-session if something surfaces that you want to capture immediately rather than waiting for pre-clear.
 

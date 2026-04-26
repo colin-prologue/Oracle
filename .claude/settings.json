@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/precompact_oracle_nudge.py"
+          }
+        ]
+      }
+    ]
+  }
+}
