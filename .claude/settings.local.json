@@ -80,7 +80,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(tee /tmp/oracle_recall.json)",
       "Bash(xargs -r git branch -d)",
-      "Bash(chmod +x /Users/colindwan/Developer/Hindsight/scripts/precompact_oracle_nudge.py)"
+      "Bash(chmod +x /Users/colindwan/Developer/Hindsight/scripts/precompact_oracle_nudge.py)",
+      "Bash(chmod +x /Users/colindwan/Developer/Hindsight/scripts/userprompt_oracle_capture_nudge.py)"
     ]
   }
 }
