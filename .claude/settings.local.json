@@ -53,7 +53,31 @@
       "Bash(git rm:*)",
       "Bash(git commit:*)",
       "Bash(gh pr:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(grep *)",
+      "Skill(update-config)",
+      "Read(//Users/colindwan/Developer/Hindsight/**)",
+      "Bash(gh issue *)",
+      "Bash(git fetch *)",
+      "Bash(chmod +x /Users/colindwan/Developer/Hindsight/scripts/test-hooks.py)",
+      "Skill(commit-commands:commit-push-pr)",
+      "Bash(rg -ln \"llm|model|provider\" hindsight*/)",
+      "Bash(rg -n \"anthropic|haiku|sonnet|opus|api_key|reflect|llm|/messages\" .claude/skills/oracle*/ scripts/)",
+      "Bash(uvx --from hindsight-embed --help)",
+      "Bash(pip show *)",
+      "Bash(uv tool *)",
+      "Bash(crontab -l)",
+      "Bash(rg -n \"response_schema|structured_output|reflect.*budget|/reflect\" .claude/skills/oracle*/)",
+      "Bash(echo \"\\(curl returned $?\\)\")",
+      "Bash(git -C /Users/colindwan/Developer/Hindsight status --short)",
+      "Bash(git -C /Users/colindwan/Developer/Hindsight branch --show-current)",
+      "Bash(git -C /Users/colindwan/Developer/Hindsight checkout -b 010-organic-oracle-invocation)",
+      "Bash(git *)",
+      "Bash(codex --version)",
+      "Bash(uvx --help)",
+      "Bash(uv --version)",
+      "Bash(uv run *)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }

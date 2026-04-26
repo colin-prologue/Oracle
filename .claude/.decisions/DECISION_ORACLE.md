@@ -308,6 +308,21 @@ SpecKit remains a development tool used in this repo; nothing about that changes
 - [ ] Evaluate multi-user bank setup
 - [ ] Consider Hindsight Cloud for shared access without self-hosting overhead
 
+### Phase 7 — Organic Invocation & Cross-Tool Query *(in progress, 2026-04-25)*
+
+Goal: make oracle queries fire organically at decision moments, and extend query access to Codex sessions. Capture (debate/observe/synthesize/preclear) stays explicit per PHI-003 — this phase only touches the read path.
+
+**In sequence:**
+- [x] Rewrite `/oracle` skill `description` as a trigger condition (when to use, not what it does); add reinforcing one-liner in CLAUDE.md *(commit `de6e18c`)*
+- [x] Add a relevance gate to the synthesis subagent prompt so it returns "no relevant entries" rather than padding answers from weakly-related hits *(originally planned daemon-side; hindsight-embed exposes neither per-result similarity scores nor a min_score request param, so the gate moved to the LLM-judged synthesis layer instead — see future-exploration item below for the daemon-side variant)*
+- [x] Build an MCP `oracle_query` server wrapping the daemon's recall endpoint; tool description carries the same broad trigger phrasing as the CC `/oracle` skill, and the JSON response embeds the relevance-gate instruction the calling model applies. Lives at `mcp/oracle-query/server.py` (PEP 723 inline-deps Python script run via `uv`). Verified end-to-end via MCP stdio client probe — tool listing, off-topic query, and on-topic query all return well-formed responses. *(Registration in `~/.codex/config.toml` and `~/.codex/AGENTS.md` is a manual step — block documented in `mcp/oracle-query/README.md`. Codex desktop needs absolute paths + explicit `cwd` per openai/codex issue #14449.)*
+
+**Future exploration (not yet scoped):**
+- [ ] **Context-threshold preclear nudge** — hook or signal that detects approaching context limits and recommends `/oracle-preclear` before the user runs out of room. Goal: ensure the best context gets captured rather than lost to compaction. Open question: is this a CC-side hook, a Stop-event check, or a token-count threshold?
+- [ ] **Keyword-triggered capture nudge** — detect signals like "remember", "worth recording", "decision worth keeping" in user messages and surface a recommendation to invoke `/oracle-debate` or `/oracle-observe`. Must not collide with CLAUDE.md's "remember" semantics (those write to user-memory files, not the oracle bank). Open question: scope of trigger vocabulary, and whether the nudge fires inline or queues for next pause.
+- [ ] **Daemon-side similarity floor (local fork of `hindsight-embed`)** — the synthesis-side LLM gate (shipped above) is approximate; a true similarity floor requires per-result `score` in the recall response and a `min_score` request param, neither of which `hindsight-embed` exposes today. Solo-user scope means the path is a local fork of `hindsight-embed` (point `uvx` at the fork, manage rebases on upstream releases) — not an upstream PR. Decision trigger: ship the LLM gate, gather data via the query/answer log, then evaluate whether numeric-threshold rigor justifies fork-maintenance overhead.
+- [ ] **Query/answer log + review ritual** — append `{question, answer, cited_ids, timestamp, project}` to a JSONL log under `.decisions/queries/` on every `/oracle` invocation. Periodic review surfaces two signals: (a) *synthesis quality* — was the answer good or did the subagent reach for weak citations to justify any answer? (b) *PHI freshness* — do cited philosophies still hold? Citation counts alone are insufficient because they don't distinguish load-bearing citation from desperate reach; the question text is what reveals whether the bank is being asked questions it can't actually answer. Review must NOT auto-create OBSes (PHI-003 / Pattern 9 — autoRetain failure mode); it can only *recommend* fine-tuning existing entries, deprecating zero-value ones, or proposing new PHIs/OBSs from recurring question patterns. Likely pairs with the relevance-floor work since the log is exactly the empirical data needed to calibrate the floor.
+
 ---
 
 ## Key Architectural Decisions
