@@ -40,6 +40,16 @@ def hindsight_stats(bank: str) -> dict:
     return _get(f"/v1/default/banks/{bank}/stats")
 
 
+@mcp.tool()
+def hindsight_list_documents(bank: str, prefix: str | None = None) -> list[dict]:
+    """List documents in the bank. If prefix is given (e.g., "PHI-"), filter client-side."""
+    body = _get(f"/v1/default/banks/{bank}/documents")
+    items = body.get("items", [])
+    if prefix:
+        items = [d for d in items if d.get("id", "").startswith(prefix)]
+    return items
+
+
 def main() -> None:
     mcp.run()
 
