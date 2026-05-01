@@ -79,9 +79,11 @@ Cleanup follow-ups (manual, no MCP delete path):
 - Bank entries `PHI-020` and `OBS-013` are tagged `smoke_test` in metadata — prune via daemon admin path or leave until next bank GC.
 - 5 stale `/tmp/oracle_*.{txt,json}` files from pre-migration shell-staging path can be `rm`'d at convenience.
 
-### T21 — MCP grant auto-promotion (DEFERRED)
+### T21 — MCP grant auto-promotion (1st checkpoint clean — 2026-05-01)
 
-Diff `~/.claude/settings.json` against the `.bak.20260430-214420` backup after a few sessions and confirm whether any `mcp__hindsight__*` entries were auto-re-added by the OBS-012 mechanism. Initial diff (immediately post-edit) shows only the 9 intended changes (2 removed + 7 added).
+Diff `~/.claude/settings.json` against the `.bak.20260430-214420` backup after a few sessions and confirm whether any `mcp__hindsight__*` entries were auto-re-added by the OBS-012 mechanism. Initial diff (immediately post-edit) showed only the 9 intended changes (2 removed + 7 added).
+
+**Re-check after T20 smoke session (2026-05-01)** — `diff <(jq -S . ~/.claude/settings.json.bak.20260430-214420) <(jq -S . ~/.claude/settings.json)` still shows the same 9 lines and nothing else. No auto-promotion drift, no restored bash patterns, no surprise additions. Caveat: only one additional session of MCP usage has elapsed; this covers the migration session itself plus the heaviest single-session use (all 7 tools exercised), but a longer-horizon re-check is still useful — re-run this command in 2–3 weeks to catch slow drift.
 
 ## Rollback runbook
 
@@ -92,7 +94,7 @@ Diff `~/.claude/settings.json` against the `.bak.20260430-214420` backup after a
 
 ## Open follow-ups
 
-- T20 done 2026-05-01. **T21 must still run in a fresh CC session** before this branch is considered fully verified.
+- T20 done 2026-05-01. T21 first checkpoint clean as of 2026-05-01; long-horizon re-check (2–3 weeks of use) still recommended to catch slow drift.
 - **Bank cleanup**: PHI-020 and OBS-013 smoke artifacts persist in the oracle bank (no MCP delete tool exists); both are tagged `smoke_test: T20-stepN` in metadata. Decide whether to add a delete-by-id MCP tool or leave smoke artifacts for the next consolidation/GC pass.
 - **MCP grant auto-promotion behavior**: the chosen policy (auto-approve all 7) makes promotion benign today, but future tools landing as `ask`-class would be vulnerable. Worth checking again after a few sessions of use.
 - **Mock fixtures divergence from real `/stats` shape**: not load-bearing now, but adopt closer-to-real shape if stats fields gain tests.
