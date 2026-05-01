@@ -1,0 +1,40 @@
+{
+    "bank_id": "oracle",
+    "total_nodes": 434,
+    "total_links": 7159,
+    "total_documents": 42,
+    "nodes_by_fact_type": {
+        "experience": 203,
+        "observation": 218,
+        "world": 13
+    },
+    "links_by_link_type": {
+        "temporal": 2834,
+        "caused_by": 27,
+        "entity": 1170,
+        "semantic": 3128
+    },
+    "links_by_fact_type": {
+        "experience": 7011,
+        "world": 148
+    },
+    "links_breakdown": {
+        "experience": {
+            "temporal": 2748,
+            "caused_by": 26,
+            "entity": 1136,
+            "semantic": 3101
+        },
+        "world": {
+            "temporal": 86,
+            "semantic": 27,
+            "caused_by": 1,
+            "entity": 34
+        }
+    },
+    "pending_operations": 0,
+    "failed_operations": 0,
+    "last_consolidated_at": "2026-05-01T01:56:58.111792+00:00",
+    "pending_consolidation": 0,
+    "total_observations": 218
+}

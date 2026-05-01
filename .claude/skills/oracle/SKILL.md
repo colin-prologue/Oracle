@@ -25,59 +25,35 @@ If `$ARGUMENTS` is empty, ask the user: "What decision are you facing?"
 
 ## Execution
 
-1. **Check that `$ARGUMENTS` is not empty.** If empty, ask for the question
-   before proceeding.
+1. **Check that `$ARGUMENTS` is not empty.** If empty, ask: "What decision are you facing?" before proceeding.
 
-2. **Retrieve relevant memories from the oracle bank.**
+2. **Retrieve relevant memories from the oracle bank.** Call the `mcp__hindsight__hindsight_recall` tool:
 
-   **Important:** the user's question (`$ARGUMENTS`) may contain shell-
-   special characters (apostrophes, backticks, `$`). Do **not** embed
-   `$ARGUMENTS` in any bash command line, including inside double-quoted
-   strings, heredoc bodies, or `-c` arguments — the harness substitutes
-   the text into the script body before bash parses it, so shell escaping
-   does not protect you. Use this two-step pattern instead:
+   - `bank`: `"oracle"`
+   - `query`: the user's question (`$ARGUMENTS`) — passed as a typed string arg, no shell escaping needed
+   - `budget`: `"mid"` (default)
+   - `max_tokens`: `4096` (default)
+   - `top_n`: `10` (default)
 
-   **Step 2a — write the question to a file via the `Write` tool** (not
-   via shell). Target path: `/tmp/oracle_q.txt`. Write only the
-   `$ARGUMENTS` text as the file contents.
+   The tool returns the slim shape — already projected to `{text, type, document_id, mentioned_at, metadata}`. No further trimming needed in step 3.
 
-   **Step 2b — run the recall, reading the question from that file:**
+   If the tool errors with a connection failure to the daemon:
+   > **Oracle unavailable** — start the daemon with:
+   > ```
+   > HINDSIGHT_API_EMBEDDINGS_LOCAL_FORCE_CPU=1 HINDSIGHT_API_RERANKER_LOCAL_FORCE_CPU=1 uvx hindsight-embed daemon start
+   > ```
+   Do not proceed.
 
-```bash
-python3 -c 'import json; q=open("/tmp/oracle_q.txt").read().rstrip("\n"); print(json.dumps({"query": q, "budget": "mid", "max_tokens": 4096}))' > /tmp/oracle_payload.json
-curl -s -X POST "http://localhost:9077/v1/default/banks/oracle/memories/recall" \
-  -H "Content-Type: application/json" \
-  -d @/tmp/oracle_payload.json | tee /tmp/oracle_recall.json
-```
+3. **Inspect results.** If the returned list is empty, tell the user "The oracle has no entries relevant to that question." Do not dispatch a subagent. Stop here. Otherwise, the list is already top-10 slim — pass directly to step 4 as `{RESULTS_JSON}`.
 
-   If the curl command fails with a connection error:
-   - Surface this message: **Oracle unavailable** — start the daemon with:
-     ```
-     HINDSIGHT_API_EMBEDDINGS_LOCAL_FORCE_CPU=1 HINDSIGHT_API_RERANKER_LOCAL_FORCE_CPU=1 uvx hindsight-embed daemon start
-     ```
-   - Do not proceed further.
-
-3. **Inspect and trim `results`.** The response has a `results` array; each
-   item has `text`, `type` (`observation` | `experience`), `document_id`
-   (e.g. `PHI-005`, `OBS-003`), `mentioned_at`, and optional `metadata`.
-   Recall returns rank-ordered by relevance.
-
-   - If `results` is empty: tell the user "The oracle has no entries
-     relevant to that question." Do not dispatch a subagent. Stop here.
-   - Otherwise, take the top 10 results (or fewer if the array is shorter)
-     and project each to the slim shape `{text, type, document_id,
-     mentioned_at, metadata}`, dropping null fields. This is the
-     `{RESULTS_JSON}` value passed to the synthesis subagent in step 4.
-
-4. **Dispatch a synthesis subagent.** Use the `Agent` tool with these
-   parameters:
+4. **Dispatch a synthesis subagent.** Use the `Agent` tool with these parameters:
 
    - `subagent_type`: `general-purpose`
    - `model`: `sonnet`
    - `description`: `Oracle synthesis`
    - `prompt`: a self-contained brief built from the template below.
 
-   Synthesis brief template (substitute `{QUESTION}` and `{RESULTS_JSON}`):
+   Synthesis brief template (substitute `{QUESTION}` and `{RESULTS_JSON}` — the latter inlined as JSON string):
 
    ```
    You are synthesizing an answer for the Decision Oracle. The oracle
@@ -123,43 +99,24 @@ curl -s -X POST "http://localhost:9077/v1/default/banks/oracle/memories/recall" 
    Output only the markdown answer.
    ```
 
-   Pass the slim top-10 results from step 3 inline as JSON for
-   `{RESULTS_JSON}`.
-
 5. **Render the subagent's response directly to the user.**
 
-6. **Log the query.** Append a single JSONL line to the canonical
-   queries log so future review can calibrate trigger/gate behavior and
-   surface PHI freshness signals. Empty-result queries are logged too —
-   their absence would defeat the calibration purpose.
+6. **Log the query** via `mcp__hindsight__hindsight_log_query`:
 
-   **Important — same shell-escape concern as step 2.** The question
-   AND answer text may contain shell-special characters. Do not embed
-   either in a bash command line. Use the `Write` tool to stage the
-   answer text to `/tmp/oracle_answer.txt` (the question is already at
-   `/tmp/oracle_q.txt`, the recall response at `/tmp/oracle_recall.json`),
-   then invoke the logger script:
+   - `client`: `"claude-code"`
+   - `question`: `$ARGUMENTS` (typed string arg, no shell escaping)
+   - `answer`: the subagent's full response text
+   - `recall_data`: the recall result from step 2
 
-```bash
-python3 "${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/scripts/log_oracle_query.py" \
-  --client claude-code \
-  --question-file /tmp/oracle_q.txt \
-  --answer-file /tmp/oracle_answer.txt \
-  --recall-file /tmp/oracle_recall.json
-```
+   The MCP tool resolves `${HINDSIGHT_ROOT}/.decisions/queries/YYYY-MM.jsonl` internally — no path argument needed.
 
 7. **Append a capture prompt** at the end:
 
-   > If this query surfaced a decision worth recording, capture it with
-   > `/oracle-debate "[brief description]"`.
+   > If this query surfaced a decision worth recording, capture it with `/oracle-debate "[brief description]"`.
 
 ## Notes
 
-- The oracle answers from retained PHIs, OBSs, session logs, and the
-  Decision Constitution mental model — whatever `/recall` surfaces
-  semantically.
-- If the bank is empty or has no relevant content, say so plainly. This
-  is correct behavior, not an error.
-- Synthesis runs on subscription tokens at Sonnet 4.6. The previous
-  `/reflect` path used haiku-3 against the Anthropic API; we accept a
-  modest token-cost increase for subscription-vs-API routing.
+- The oracle answers from retained PHIs, OBSs, session logs, and the Decision Constitution mental model — whatever the recall tool surfaces semantically.
+- If the bank is empty or has no relevant content, say so plainly. This is correct behavior, not an error.
+- Synthesis runs on subscription tokens at Sonnet 4.6 via the Agent tool. The previous `/reflect` path used haiku-3 against the Anthropic API.
+- All daemon HTTP calls are routed through `mcp__hindsight__*` MCP tools — no inline `python3 -c`, `curl`, or `/tmp` staging.

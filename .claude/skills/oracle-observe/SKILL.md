@@ -25,62 +25,23 @@ If `$ARGUMENTS` is empty, ask: "What observation do you want to capture?"
 
 ### Step 1 — Check daemon
 
-Run:
-```bash
-curl -s http://localhost:9077/v1/default/banks/oracle/stats
-```
+Call `mcp__hindsight__hindsight_stats(bank="oracle")`. If the call errors with a connection failure, surface: **Oracle unavailable** — see daemon start instructions in `/oracle` skill. Do not proceed.
 
-If the daemon is unreachable, stop and surface the start command from `/oracle` skill. Do not proceed without daemon connectivity.
-
-If `pending_operations > 0`, warn the user but do not block — fit-check reflect is lower stakes than synthesis. Proceed with caution noted.
+If the response includes `pending_operations > 0`, warn the user but do not block — fit-check recall is lower stakes than synthesis. Proceed with caution noted.
 
 ### Step 2 — Determine next OBS-NNN ID
 
-Run:
-```bash
-curl -s http://localhost:9077/v1/default/banks/oracle/documents
-```
+Call `mcp__hindsight__hindsight_list_documents(bank="oracle", prefix="OBS-")`. Find the highest `id` (numeric suffix). Next ID = highest + 1, zero-padded to 3 digits. If none exist, start at `OBS-001`.
 
-Parse for `id` matching `OBS-\d+`. Find the highest. Next ID = highest + 1, zero-padded to 3 digits. If none exist, start at `OBS-001`.
+### Step 3 — Run fit-check via MCP recall
 
-### Step 3 — Run fit-check via recall
+Call `mcp__hindsight__hindsight_recall`:
+- `bank`: `"oracle"`
+- `query`: the observation text (`$ARGUMENTS`) — passed as a typed string arg, no shell escaping or `/tmp` staging needed
+- `budget`: `"mid"` (default)
+- `top_n`: `10` (default)
 
-Use the observation text as a recall query to surface related entries.
-This used to call `/reflect` (paid-API LLM synthesis); it's now `/recall`
-(retrieval-only) — the parent skill assistant interprets the chunks
-directly in Step 4, so no subagent dispatch is needed.
-
-**Important:** `$ARGUMENTS` may contain shell-special characters
-(apostrophes, backticks, `$`). Do **not** embed it in any bash command
-line — the harness substitutes the text into the script body before
-bash parses it, so shell escaping does not protect you.
-
-**Step 3a — write the observation to a file via the `Write` tool**
-(not via shell). Target path: `/tmp/oracle_observation.txt`. Write only
-the `$ARGUMENTS` text as the file contents.
-
-**Step 3b — run the recall, reading the observation from that file:**
-
-```bash
-python3 -c "
-import json, urllib.request
-q = open('/tmp/oracle_observation.txt').read().rstrip('\n')
-payload = {'query': q, 'budget': 'mid', 'max_tokens': 4096}
-req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/memories/recall',
-    data=json.dumps(payload).encode(),
-    headers={'Content-Type': 'application/json'},
-    method='POST'
-)
-with urllib.request.urlopen(req, timeout=60) as resp:
-    d = json.loads(resp.read())
-    for r in d.get('results', [])[:10]:
-        doc = r.get('document_id') or '-'
-        kind = r.get('type', '?')
-        text = (r.get('text') or '').replace('\n', ' ')[:300]
-        print(f'{doc} ({kind}): {text}')
-"
-```
+The result is the slim shape — top 10 entries with `text`, `type`, `document_id`, `mentioned_at`, `metadata`. Use this for step 4's fit narrative.
 
 ### Step 4 — Present fit analysis
 
@@ -140,41 +101,21 @@ Wait for explicit confirmation. Never auto-retain.
 
 ### Step 7 — Retain to oracle bank
 
-```bash
-python3 -c "
-import json, urllib.request, datetime
+After explicit user confirmation in step 6, call `mcp__hindsight__hindsight_retain_obs`:
 
-content = '''CURATED_CONTENT_HERE'''
-obs_id = 'OBS_ID_HERE'
-derived_from = DERIVED_FROM_LIST_HERE
-relationship = 'RELATIONSHIP_HERE'
-
-payload = {
-    'items': [{
-        'content': content,
-        'context': 'observation',
-        'document_id': obs_id,
-        'metadata': {
-            'type': 'observation',
-            'date': datetime.date.today().isoformat(),
-            'derived_from': ', '.join(derived_from) if derived_from else '',
-            'relationship': relationship,
-            'source': 'manual'
-        }
-    }]
-}
-req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/memories',
-    data=json.dumps(payload).encode(),
-    headers={'Content-Type': 'application/json'},
-    method='POST'
-)
-with urllib.request.urlopen(req, timeout=30) as resp:
-    print(json.dumps(json.loads(resp.read()), indent=2))
-"
-```
-
-Replace placeholders with confirmed values. `derived_from` may be an empty list `[]` for standalone observations.
+- `bank`: `"oracle"`
+- `document_id`: e.g., `"OBS-013"` (computed in step 2)
+- `content`: the curated text from step 5
+- `derived_from`: comma-separated list of related PHI/OBS IDs from the user's confirmation; omit if standalone
+- `metadata`:
+  ```json
+  {
+    "type": "observation",
+    "date": "<YYYY-MM-DD today>",
+    "relationship": "<new | extends OBS-NNN | contradicts PHI-NNN>",
+    "source": "manual"
+  }
+  ```
 
 ### Step 8 — Confirm completion
 
