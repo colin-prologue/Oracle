@@ -57,13 +57,20 @@ Diff applied to `permissions.allow`:
 - `hindsight_recall(bank="oracle", query="path anchor invariant", top_n=3)` returns slim-shape entries (no `score`, no `rank`); 3 items as requested
 - `hindsight_log_query(client="test-client", question="q", answer="a", recall_data={})` writes to `${HINDSIGHT_ROOT}/.decisions/queries/YYYY-MM.jsonl`; consumer-project CWD remains untouched (PHI-006 invariant verified)
 
-### Mock-vs-real-daemon shape divergence (note for future tests)
+### Mock-vs-real-daemon shape divergence — CLOSED 2026-05-01
 
-Real daemon `/stats` shape: `{bank_id, total_nodes, total_links, total_documents, nodes_by_fact_type, links_by_link_type, links_by_fact_type, links_breakdown, pending_operations, failed_operations, last_consolidated_at, pending_consolidation, total_observations}`.
+Original concern: mock fixtures used hand-crafted shapes (`{node_count, observation_count}`) that didn't match the real daemon. Tools returned body verbatim, so tests passed circularly.
 
-Mock fixtures used `{node_count, observation_count}`. Tools return body verbatim, so mocks pass; the divergence is mock-only and does not affect runtime correctness, but the simpler mock shape is misleading if used as documentation. Consider widening mock fixtures to mirror real shape if regression tests start asserting on stat fields.
+**Resolution (post-merge-review pass):** Recorded one real response per endpoint into `tests/fixtures/daemon/{stats,documents,recall}.json` from a live daemon. Tests assert tool behavior against the recorded shapes via a `load_fixture()` helper in `tests/conftest.py`. Contract-shape pins added: `test_hindsight_stats_returns_real_daemon_shape` requires `bank_id, total_nodes, total_documents, total_observations`; `test_hindsight_list_documents_returns_real_daemon_shape` requires `id, bank_id, document_metadata, created_at`; `test_slim_projection_against_real_recall_shape` asserts the projection drops *all* daemon-internal keys, not just the two cited in the original docstring.
 
-Real `/recall` returns `metadata: {}` for entries without metadata; the slim projector keeps `metadata` because `{} is not None`. Acceptable today (empty dict ≠ noise) but a future stricter projector could drop empty containers too.
+Concrete divergences the original mocks would have hidden:
+- `documents.items[*]` has no `type` field — taxonomy lives under `document_metadata`. The original `test_hindsight_list_documents_no_prefix` mock invented a `type` key.
+- `recall.results[*]` carries 13 keys (`chunk_id, context, document_id, entities, id, mentioned_at, metadata, occurred_end, occurred_start, source_fact_ids, tags, text, type`), not the 7 in the mock. Original `_project_slim` docstring claimed it drops `score, rank` — actually drops 8+ fields.
+- `recall.results[*].metadata` is `{}` for entries with no metadata, not absent. Slim projector keeps it. Acceptable.
+
+**Route-pinning made mandatory** (same pass): `mock_daemon.respond()` now requires `url=` and `method=` kwargs and asserts on every call. Previously 8 of 23 tests pinned routes; now all 24 do. Closes the route-drift hole where a tool could be silently re-routed without test failure.
+
+Reference: PHI-007 (shared spec for multi-dialect contract drift) governed the call to fix-now rather than defer; oracle query 2026-05-01.
 
 ### T20 — end-to-end skill smoke (DONE — 2026-05-01)
 
@@ -97,4 +104,6 @@ Diff `~/.claude/settings.json` against the `.bak.20260430-214420` backup after a
 - T20 done 2026-05-01. T21 first checkpoint clean as of 2026-05-01; long-horizon re-check (2–3 weeks of use) still recommended to catch slow drift.
 - **Bank cleanup**: PHI-020 and OBS-013 smoke artifacts persist in the oracle bank (no MCP delete tool exists); both are tagged `smoke_test: T20-stepN` in metadata. Decide whether to add a delete-by-id MCP tool or leave smoke artifacts for the next consolidation/GC pass.
 - **MCP grant auto-promotion behavior**: the chosen policy (auto-approve all 7) makes promotion benign today, but future tools landing as `ask`-class would be vulnerable. Worth checking again after a few sessions of use.
-- **Mock fixtures divergence from real `/stats` shape**: not load-bearing now, but adopt closer-to-real shape if stats fields gain tests.
+- ~~**Mock fixtures divergence from real `/stats` shape**~~: closed 2026-05-01 — recorded fixtures + contract-shape pins + mandatory route-pinning. See "Mock-vs-real-daemon shape divergence" section above.
+- **Two-transport hybrid in `oracle-preclear`**: MCP calls and bash filesystem ops coexist under one parallel-execution step. Stable today (filesystem isn't a daemon resource) but reads as leftover migration. Consider an explicit boundary annotation in the skill or factor the bash filesystem ops into a separate sub-step.
+- **Defensive `return []` on missing daemon keys**: `hindsight_list_documents` and `hindsight_recall` swallow malformed responses. PHI-014 tension noted in test docstrings. Today the contract-shape tests are the canary; if a daemon shape change isn't covered by a contract assertion, the tolerance hides it. Revisit if a regression slips through.

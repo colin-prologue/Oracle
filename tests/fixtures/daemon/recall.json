@@ -1,0 +1,103 @@
+{
+  "results": [
+    {
+      "id": "a2e03217-29ba-49ed-93c4-8940ace06510",
+      "text": "Oracle discovered on April 30, 2026 that capability allowlists drift toward over-permissive baselines unless pruned proactively. The root cause is structural: each capability grant is reactive (unblock work now) while removal is invisible (no signal an entry is stale). Wide wildcards entered 'just this once' to unblock real work and stayed forever; stale entries from removed features survived past the feature itself; and automated allowlist mechanisms (auto-grant) silently re-introduce permissions during cleanup sessions, making pruning work have a half-life unless paired with deny rules, disabled auto-grant paths, or increased audit frequency. Removing wide allowlist wildcards like Bash(curl *) from .claude/settings.local.json can be silently re-introduced mid-session by auto-grant mechanisms that restore previously-approved patterns on subsequent matching invocations.",
+      "type": "observation",
+      "entities": null,
+      "context": null,
+      "occurred_start": "2026-04-30T01:31:49.914792+00:00",
+      "occurred_end": "2026-04-30T01:34:10.609774+00:00",
+      "mentioned_at": "2026-04-30T01:34:10.629774+00:00",
+      "document_id": null,
+      "metadata": {},
+      "chunk_id": null,
+      "tags": [],
+      "source_fact_ids": null
+    },
+    {
+      "id": "5b375ef5-d7e0-4911-b760-075e82996c5b",
+      "text": "Oracle holds the philosophy that capability allowlists drift toward over-permissive baselines unless pruned proactively because each grant is reactive (unblock work now) while removal is invisible (no signal an entry is stale). One-shot permission approvals should be treated as candidates for cleanup, not permanent grants, and periodic audits should be scheduled the same way dependency upgrades are. | Involving: oracle (AI agent) | Based on observation that wide wildcards entered 'just this once' to unblock real work and stayed forever; stale entries from removed features survived past the feature itself; and auto-allowlist mechanisms silently re-introduced permissions during cleanup sessions.",
+      "type": "experience",
+      "entities": [
+        "oracle",
+        "capability allowlists"
+      ],
+      "context": "philosophy",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-04-30T01:31:49.924792+00:00",
+      "document_id": "PHI-019",
+      "metadata": {
+        "date": "2026-04-29",
+        "type": "philosophy",
+        "domain": "infrastructure",
+        "source": "oracle-preclear",
+        "source_project": "Claude-Root"
+      },
+      "chunk_id": "oracle_PHI-019_0",
+      "tags": [],
+      "source_fact_ids": null
+    },
+    {
+      "id": "7a337a9a-9115-4963-987e-06e785503cd9",
+      "text": "Pattern 12\u2014Shared Spec vs. Shared Implementation in Multi-Dialect Systems: Extract shared declarative spec (data structure) rather than shared implementation when the same logical predicate exists in multiple execution dialects. One spec consumed by N dialect-specific builders eliminates drift while preserving each path's native optimizations. This pattern applies to Python predicates + SQL WHERE clauses, client-side + server-side validators, ORM filters + raw SQL, frontend form logic + backend API schemas, CLI flag parsers + config-file parsers, mock fixtures + production data generators\u2014any two code paths that must agree on a contract but execute in different runtimes or dialects. Critical constraint: very small specs (one or two fields) risk noise; abstraction overhead is only justified when solving material drift or maintenance problems, not just line-count reduction.",
+      "type": "observation",
+      "entities": null,
+      "context": null,
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-04-21T23:59:30.007330+00:00",
+      "document_id": null,
+      "metadata": {},
+      "chunk_id": null,
+      "tags": [],
+      "source_fact_ids": null
+    }
+  ],
+  "trace": null,
+  "entities": {
+    "oracle": {
+      "entity_id": "70fc220c-4eb5-4233-b57c-d91776559c5c",
+      "canonical_name": "oracle",
+      "observations": []
+    },
+    "capability allowlists": {
+      "entity_id": "d7498a27-f4d5-4bda-8b4a-eca17ecaea6c",
+      "canonical_name": "capability allowlists",
+      "observations": []
+    },
+    "scope management": {
+      "entity_id": "9a433e4d-c7ac-4268-8fc4-ac0c4519946f",
+      "canonical_name": "scope management",
+      "observations": []
+    },
+    "external artifact ingestion": {
+      "entity_id": "c83538ee-7533-47b3-b901-bea8ec898e1e",
+      "canonical_name": "external artifact ingestion",
+      "observations": []
+    },
+    "Feature 015-coverage-ci-gate-s": {
+      "entity_id": "0d19c6e5-246d-4d6c-b07f-143eb04a449c",
+      "canonical_name": "Feature 015-coverage-ci-gate-s",
+      "observations": []
+    },
+    "LOG-046": {
+      "entity_id": "a059ebb8-f280-47dd-afe4-1b246afed93d",
+      "canonical_name": "LOG-046",
+      "observations": []
+    },
+    "TravelPlanner": {
+      "entity_id": "b6d81d44-7613-4e31-8795-7211a8e125f9",
+      "canonical_name": "TravelPlanner",
+      "observations": []
+    },
+    "spec.md": {
+      "entity_id": "a970a9b5-1b0c-4415-aaf3-ff04f153dfc7",
+      "canonical_name": "spec.md",
+      "observations": []
+    }
+  },
+  "chunks": null,
+  "source_facts": null
+}
