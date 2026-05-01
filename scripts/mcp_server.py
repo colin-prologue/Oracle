@@ -135,6 +135,29 @@ def hindsight_retain_phi(
     )
 
 
+@mcp.tool()
+def hindsight_retain_obs(
+    bank: str,
+    document_id: str,
+    content: str,
+    derived_from: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    """Retain an Observation (OBS) record to the bank.
+
+    Hard-codes context='observation'. document_id required (e.g., "OBS-013").
+    Use `derived_from` to cite related PHI/OBS IDs.
+    """
+    return _retain(
+        bank,
+        context="observation",
+        content=content,
+        document_id=document_id,
+        derived_from=derived_from,
+        metadata=metadata,
+    )
+
+
 def main() -> None:
     mcp.run()
 

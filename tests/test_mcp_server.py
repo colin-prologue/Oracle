@@ -217,3 +217,25 @@ def test_hindsight_retain_phi_omits_derived_from_when_absent(mock_daemon):
     body = json.loads(mock_daemon["last_request"]()["body"])
     item = body["items"][0]
     assert "derived_from" not in item["metadata"]
+
+
+def test_hindsight_retain_obs_maps_context_observation(mock_daemon):
+    sys.path.insert(0, ".")
+    if "scripts.mcp_server" in sys.modules:
+        del sys.modules["scripts.mcp_server"]
+    mod = importlib.import_module("scripts.mcp_server")
+
+    mock_daemon["respond"]({"document_id": "OBS-013"})
+    mod.hindsight_retain_obs(
+        bank="oracle",
+        document_id="OBS-013",
+        content="observation body",
+        derived_from="PHI-007, PHI-019",
+        metadata={"source": "manual"},
+    )
+
+    body = json.loads(mock_daemon["last_request"]()["body"])
+    item = body["items"][0]
+    assert item["context"] == "observation"
+    assert item["document_id"] == "OBS-013"
+    assert item["metadata"]["derived_from"] == "PHI-007, PHI-019"
