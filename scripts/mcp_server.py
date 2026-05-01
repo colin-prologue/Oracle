@@ -50,6 +50,32 @@ def hindsight_list_documents(bank: str, prefix: str | None = None) -> list[dict]
     return items
 
 
+@mcp.tool()
+def hindsight_recall(
+    bank: str,
+    query: str,
+    budget: str = "mid",
+    max_tokens: int = 4096,
+    top_n: int = 10,
+    verbose: bool = False,
+) -> list[dict] | dict:
+    """Retrieve relevant memories from the bank.
+
+    Returns slim shape {text, type, document_id, mentioned_at, metadata} by default;
+    top_n entries (default 10). Set verbose=True to get the raw daemon response
+    including scores and rank metadata.
+
+    The default-slim shape matches what the oracle skills' synthesis subagents
+    consume — see CDR-subscription-llm-routing.md.
+    """
+    payload = {"query": query, "budget": budget, "max_tokens": max_tokens}
+    body = _post(f"/v1/default/banks/{bank}/memories/recall", payload, timeout=60)
+    if verbose:
+        return body
+    results = body.get("results", [])[:top_n]
+    return _project_slim(results)
+
+
 def _project_slim(results: list[dict]) -> list[dict]:
     """Project recall results to Claude-optimized shape: {text, type, document_id, mentioned_at, metadata}.
 
