@@ -65,15 +65,19 @@ Mock fixtures used `{node_count, observation_count}`. Tools return body verbatim
 
 Real `/recall` returns `metadata: {}` for entries without metadata; the slim projector keeps `metadata` because `{} is not None`. Acceptable today (empty dict ≠ noise) but a future stricter projector could drop empty containers too.
 
-### T20 — end-to-end skill smoke (DEFERRED)
+### T20 — end-to-end skill smoke (DONE — 2026-05-01)
 
-Requires Claude Code restart to pick up the MCP registration; cannot be performed from inside the live session that registered it. Run in a fresh session:
+Run in a fresh post-restart session against the registered hindsight MCP server.
 
-1. `/oracle "What patterns govern my permission allowlist decisions?"` — verify recall + synthesis + log
-2. `/oracle-debate "Test PHI for smoke verification — delete after"` — verify retain bank-first, file write second, delete after
-3. `/oracle-observe "Smoke-test observation — delete after"` — verify no `/tmp/oracle_*` files, delete after
-4. `/oracle-synthesize` — verify no `/tmp/oracle_synthesize_*` files, delete after
-5. `/oracle-preclear` — verify multi-step retain ordering
+1. `/oracle "What patterns govern my permission allowlist decisions?"` — ✅ recall + Sonnet synthesis subagent + `mcp__hindsight__hindsight_log_query` wrote to `${HINDSIGHT_ROOT}/.decisions/queries/2026-05.jsonl` (PHI-006 anchor invariant holds)
+2. `/oracle-debate "Test PHI for smoke verification — delete after"` — ✅ `mcp__hindsight__hindsight_retain_phi` succeeded (PHI-020), then file written to absolute `$HINDSIGHT_ROOT` path, then file deleted; bank entry tagged `smoke_test: T20-step2` in metadata for later prune
+3. `/oracle-observe "Smoke-test observation — delete after"` — ✅ `mcp__hindsight__hindsight_retain_obs` succeeded (OBS-013); zero `/tmp/oracle_*` files created this session (pre-existing files dated 2026-04-29 21:51–21:54 are pre-migration); bank entry tagged `smoke_test: T20-step3`
+4. `/oracle-synthesize` — ✅ stats + list + high-budget recall (top_n=20) via MCP; zero `/tmp/oracle_synthesize_*` files; subagent dispatch and retention deliberately skipped (no MCP delete tool — retaining a synthesis OBS would pollute the bank)
+5. `/oracle-preclear` — ✅ stats + list + recall + `mcp__hindsight__hindsight_retain_session_log` succeeded; correctly identified no PHI/OBS candidates qualify (smoke session has no new cross-project signal)
+
+Cleanup follow-ups (manual, no MCP delete path):
+- Bank entries `PHI-020` and `OBS-013` are tagged `smoke_test` in metadata — prune via daemon admin path or leave until next bank GC.
+- 5 stale `/tmp/oracle_*.{txt,json}` files from pre-migration shell-staging path can be `rm`'d at convenience.
 
 ### T21 — MCP grant auto-promotion (DEFERRED)
 
@@ -88,6 +92,7 @@ Diff `~/.claude/settings.json` against the `.bak.20260430-214420` backup after a
 
 ## Open follow-ups
 
-- **T20 + T21 must run in a fresh CC session** before this branch is considered fully verified.
+- T20 done 2026-05-01. **T21 must still run in a fresh CC session** before this branch is considered fully verified.
+- **Bank cleanup**: PHI-020 and OBS-013 smoke artifacts persist in the oracle bank (no MCP delete tool exists); both are tagged `smoke_test: T20-stepN` in metadata. Decide whether to add a delete-by-id MCP tool or leave smoke artifacts for the next consolidation/GC pass.
 - **MCP grant auto-promotion behavior**: the chosen policy (auto-approve all 7) makes promotion benign today, but future tools landing as `ask`-class would be vulnerable. Worth checking again after a few sessions of use.
 - **Mock fixtures divergence from real `/stats` shape**: not load-bearing now, but adopt closer-to-real shape if stats fields gain tests.
