@@ -239,3 +239,23 @@ def test_hindsight_retain_obs_maps_context_observation(mock_daemon):
     assert item["context"] == "observation"
     assert item["document_id"] == "OBS-013"
     assert item["metadata"]["derived_from"] == "PHI-007, PHI-019"
+
+
+def test_hindsight_retain_session_log_no_document_id(mock_daemon):
+    sys.path.insert(0, ".")
+    if "scripts.mcp_server" in sys.modules:
+        del sys.modules["scripts.mcp_server"]
+    mod = importlib.import_module("scripts.mcp_server")
+
+    mock_daemon["respond"]({"document_id": "SESSION-2026-04-30-123"})
+    mod.hindsight_retain_session_log(
+        bank="oracle",
+        content="session summary text",
+        metadata={"project": "Hindsight"},
+    )
+
+    body = json.loads(mock_daemon["last_request"]()["body"])
+    item = body["items"][0]
+    assert item["context"] == "session-log"
+    assert "document_id" not in item  # daemon assigns
+    assert item["metadata"]["project"] == "Hindsight"

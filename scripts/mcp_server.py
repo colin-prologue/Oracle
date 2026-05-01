@@ -158,6 +158,27 @@ def hindsight_retain_obs(
     )
 
 
+@mcp.tool()
+def hindsight_retain_session_log(
+    bank: str,
+    content: str,
+    metadata: dict | None = None,
+) -> dict:
+    """Retain a session-log record to the bank.
+
+    Hard-codes context='session-log'. No document_id arg — daemon assigns.
+    High-frequency, system-driven (PreCompact/SessionEnd code paths).
+    """
+    return _retain(
+        bank,
+        context="session-log",
+        content=content,
+        document_id=None,
+        derived_from=None,
+        metadata=metadata,
+    )
+
+
 def main() -> None:
     mcp.run()
 
