@@ -50,6 +50,20 @@ def hindsight_list_documents(bank: str, prefix: str | None = None) -> list[dict]
     return items
 
 
+def _project_slim(results: list[dict]) -> list[dict]:
+    """Project recall results to Claude-optimized shape: {text, type, document_id, mentioned_at, metadata}.
+
+    Drops: score, rank, any other internal-ranking fields.
+    Drops keys whose values are None (slim doesn't include null fields).
+    """
+    SLIM_KEYS = ("text", "type", "document_id", "mentioned_at", "metadata")
+    out = []
+    for r in results:
+        item = {k: r.get(k) for k in SLIM_KEYS if r.get(k) is not None}
+        out.append(item)
+    return out
+
+
 def main() -> None:
     mcp.run()
 

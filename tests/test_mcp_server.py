@@ -59,3 +59,47 @@ def test_hindsight_list_documents_with_prefix_filters_client_side(mock_daemon):
     result = mod.hindsight_list_documents(bank="oracle", prefix="PHI-")
     assert all(d["id"].startswith("PHI-") for d in result)
     assert len(result) == 2
+
+
+def test_slim_projection_keeps_required_fields_drops_others():
+    sys.path.insert(0, ".")
+    if "scripts.mcp_server" in sys.modules:
+        del sys.modules["scripts.mcp_server"]
+    mod = importlib.import_module("scripts.mcp_server")
+
+    raw_results = [
+        {
+            "text": "philosophy text",
+            "type": "experience",
+            "document_id": "PHI-001",
+            "mentioned_at": "2026-04-25T01:00:00+00:00",
+            "metadata": {"domain": "architecture"},
+            "score": 0.91,
+            "rank": 0,
+        },
+        {
+            "text": "observation text",
+            "type": "observation",
+            "document_id": None,
+            "mentioned_at": "2026-04-21T22:00:00+00:00",
+            "metadata": None,
+            "score": 0.84,
+            "rank": 1,
+        },
+    ]
+
+    slim = mod._project_slim(raw_results)
+    assert slim == [
+        {
+            "text": "philosophy text",
+            "type": "experience",
+            "document_id": "PHI-001",
+            "mentioned_at": "2026-04-25T01:00:00+00:00",
+            "metadata": {"domain": "architecture"},
+        },
+        {
+            "text": "observation text",
+            "type": "observation",
+            "mentioned_at": "2026-04-21T22:00:00+00:00",
+        },
+    ]
