@@ -170,3 +170,50 @@ def test_hindsight_recall_passes_budget_and_max_tokens(mock_daemon):
     body = json.loads(mock_daemon["last_request"]()["body"])
     assert body["budget"] == "high"
     assert body["max_tokens"] == 8192
+
+
+def test_hindsight_retain_phi_maps_context_and_metadata(mock_daemon):
+    sys.path.insert(0, ".")
+    if "scripts.mcp_server" in sys.modules:
+        del sys.modules["scripts.mcp_server"]
+    mod = importlib.import_module("scripts.mcp_server")
+
+    mock_daemon["respond"]({"document_id": "PHI-020", "mentioned_at": "2026-04-30T03:30:00+00:00"})
+    result = mod.hindsight_retain_phi(
+        bank="oracle",
+        document_id="PHI-020",
+        content="## PHI-020 — Test\n\nphilosophy body",
+        derived_from="OBS-001",
+        metadata={"domain": "architecture", "source": "oracle-debate"},
+    )
+
+    req = mock_daemon["last_request"]()
+    assert req["url"] == "http://localhost:9077/v1/default/banks/oracle/memories"
+    assert req["method"] == "POST"
+    body = json.loads(req["body"])
+    item = body["items"][0]
+    assert item["context"] == "philosophy"
+    assert item["document_id"] == "PHI-020"
+    assert item["content"] == "## PHI-020 — Test\n\nphilosophy body"
+    assert item["metadata"]["domain"] == "architecture"
+    assert item["metadata"]["derived_from"] == "OBS-001"
+    assert result["document_id"] == "PHI-020"
+
+
+def test_hindsight_retain_phi_omits_derived_from_when_absent(mock_daemon):
+    sys.path.insert(0, ".")
+    if "scripts.mcp_server" in sys.modules:
+        del sys.modules["scripts.mcp_server"]
+    mod = importlib.import_module("scripts.mcp_server")
+
+    mock_daemon["respond"]({"document_id": "PHI-021"})
+    mod.hindsight_retain_phi(
+        bank="oracle",
+        document_id="PHI-021",
+        content="body",
+        metadata={"domain": "process"},
+    )
+
+    body = json.loads(mock_daemon["last_request"]()["body"])
+    item = body["items"][0]
+    assert "derived_from" not in item["metadata"]

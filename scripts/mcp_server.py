@@ -90,6 +90,51 @@ def _project_slim(results: list[dict]) -> list[dict]:
     return out
 
 
+def _retain(bank: str, *, context: str, content: str, document_id: str | None,
+            derived_from: str | None, metadata: dict | None) -> dict:
+    """Build the retain payload and POST to daemon.
+
+    `context` is daemon-required: 'philosophy' | 'observation' | 'session-log'.
+    Derived from tool name in callers, never user-controllable.
+    """
+    md = dict(metadata or {})
+    if derived_from:
+        md["derived_from"] = derived_from
+    item: dict = {"content": content, "context": context, "metadata": md}
+    if document_id is not None:
+        item["document_id"] = document_id
+    payload = {"items": [item]}
+    return _post(f"/v1/default/banks/{bank}/memories", payload)
+
+
+@mcp.tool()
+def hindsight_retain_phi(
+    bank: str,
+    document_id: str,
+    content: str,
+    derived_from: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    """Retain a Philosophy (PHI) record to the bank.
+
+    The MCP server hard-codes context='philosophy' — the caller cannot pass
+    a mismatched type. document_id (e.g., "PHI-020") is required. Returns
+    the daemon response.
+
+    Note: caller is responsible for stripping the `<!-- ORACLE ARTIFACT -->`
+    banner from `content` before passing — the banner is a filesystem-only
+    safeguard and adds retrieval noise if embedded in the bank.
+    """
+    return _retain(
+        bank,
+        context="philosophy",
+        content=content,
+        document_id=document_id,
+        derived_from=derived_from,
+        metadata=metadata,
+    )
+
+
 def main() -> None:
     mcp.run()
 
