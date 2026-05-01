@@ -4,8 +4,11 @@
 Replaces inline python3 -c HTTP heredocs in 5 oracle skills.
 See: docs/superpowers/specs/2026-04-30-hindsight-mcp-server-design.md
 """
+import datetime
 import json
+import os
 import urllib.request
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
@@ -177,6 +180,46 @@ def hindsight_retain_session_log(
         derived_from=None,
         metadata=metadata,
     )
+
+
+def _hindsight_root() -> Path:
+    """Resolve HINDSIGHT_ROOT, falling back to ~/Developer/Hindsight.
+
+    NEVER use os.getcwd() — PHI-006 was the bug where artifacts landed
+    in consumer project trees because path resolution fell through to CWD.
+    """
+    env = os.environ.get("HINDSIGHT_ROOT")
+    if env:
+        return Path(env)
+    return Path(os.environ["HOME"]) / "Developer" / "Hindsight"
+
+
+@mcp.tool()
+def hindsight_log_query(
+    client: str,
+    question: str,
+    answer: str,
+    recall_data: dict,
+) -> dict:
+    """Append a query log line to ${HINDSIGHT_ROOT}/.decisions/queries/YYYY-MM.jsonl.
+
+    Path is anchored to HINDSIGHT_ROOT (or ~/Developer/Hindsight fallback) —
+    NEVER to CWD. PHI-006 was the bug this anchor prevents.
+    """
+    queries_dir = _hindsight_root() / ".decisions" / "queries"
+    queries_dir.mkdir(parents=True, exist_ok=True)
+    now = datetime.datetime.now(datetime.timezone.utc)
+    log_path = queries_dir / f"{now.year:04d}-{now.month:02d}.jsonl"
+    entry = {
+        "timestamp": now.isoformat(),
+        "client": client,
+        "question": question,
+        "answer": answer,
+        "recall_data": recall_data,
+    }
+    with log_path.open("a") as f:
+        f.write(json.dumps(entry) + "\n")
+    return {"logged_path": str(log_path)}
 
 
 def main() -> None:

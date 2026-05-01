@@ -259,3 +259,75 @@ def test_hindsight_retain_session_log_no_document_id(mock_daemon):
     assert item["context"] == "session-log"
     assert "document_id" not in item  # daemon assigns
     assert item["metadata"]["project"] == "Hindsight"
+
+
+def test_hindsight_log_query_writes_to_hindsight_root(tmp_path, monkeypatch):
+    sys.path.insert(0, ".")
+    if "scripts.mcp_server" in sys.modules:
+        del sys.modules["scripts.mcp_server"]
+    mod = importlib.import_module("scripts.mcp_server")
+
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+    monkeypatch.chdir("/tmp")  # CWD is somewhere else — tool must NOT use it
+
+    result = mod.hindsight_log_query(
+        client="claude-code",
+        question="what is X?",
+        answer="X is Y",
+        recall_data={"results": [{"document_id": "PHI-001"}]},
+    )
+
+    expected_dir = tmp_path / ".decisions" / "queries"
+    assert expected_dir.exists()
+    log_files = list(expected_dir.glob("*.jsonl"))
+    assert len(log_files) == 1
+    line = log_files[0].read_text().strip().splitlines()[-1]
+    parsed = json.loads(line)
+    assert parsed["client"] == "claude-code"
+    assert parsed["question"] == "what is X?"
+    assert parsed["answer"] == "X is Y"
+    assert "timestamp" in parsed
+    assert result["logged_path"] == str(log_files[0])
+
+
+def test_hindsight_log_query_falls_back_to_home_when_env_unset(tmp_path, monkeypatch):
+    sys.path.insert(0, ".")
+    if "scripts.mcp_server" in sys.modules:
+        del sys.modules["scripts.mcp_server"]
+    mod = importlib.import_module("scripts.mcp_server")
+
+    fake_home = tmp_path / "fakehome"
+    fake_home.mkdir()
+    monkeypatch.delenv("HINDSIGHT_ROOT", raising=False)
+    monkeypatch.setenv("HOME", str(fake_home))
+
+    mod.hindsight_log_query(
+        client="cli",
+        question="q",
+        answer="a",
+        recall_data={},
+    )
+
+    expected = fake_home / "Developer" / "Hindsight" / ".decisions" / "queries"
+    assert expected.exists()
+
+
+def test_hindsight_log_query_never_uses_cwd(tmp_path, monkeypatch):
+    """Critical invariant: PHI-006 lesson. CWD must not influence write path."""
+    sys.path.insert(0, ".")
+    if "scripts.mcp_server" in sys.modules:
+        del sys.modules["scripts.mcp_server"]
+    mod = importlib.import_module("scripts.mcp_server")
+
+    consumer_project = tmp_path / "TravelPlanner"
+    consumer_project.mkdir()
+    hindsight = tmp_path / "Hindsight"
+    hindsight.mkdir()
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(hindsight))
+    monkeypatch.chdir(consumer_project)  # if tool uses cwd, it lands here
+
+    mod.hindsight_log_query(client="x", question="q", answer="a", recall_data={})
+
+    # The consumer project must remain untouched.
+    assert not (consumer_project / ".decisions").exists()
+    assert (hindsight / ".decisions" / "queries").exists()
