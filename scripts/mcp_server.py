@@ -99,8 +99,16 @@ def _retain(bank: str, *, context: str, content: str, document_id: str | None,
 
     `context` is daemon-required: 'philosophy' | 'observation' | 'session-log'.
     Derived from tool name in callers, never user-controllable.
+
+    Contract: `derived_from` is a typed kwarg only. Passing `derived_from`
+    inside `metadata` is rejected — it would create silent precedence ambiguity
+    if both were set. Callers must use the kwarg.
     """
     md = dict(metadata or {})
+    if "derived_from" in md:
+        raise ValueError(
+            "derived_from must be passed as a kwarg, not inside metadata"
+        )
     if derived_from:
         md["derived_from"] = derived_from
     item: dict = {"content": content, "context": context, "metadata": md}
