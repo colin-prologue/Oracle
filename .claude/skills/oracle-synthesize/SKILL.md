@@ -25,76 +25,43 @@ If `$ARGUMENTS` is provided, use it as the reflect query. Otherwise use the defa
 
 ### Step 1 — Check daemon and pending operations
 
-Run:
-```bash
-curl -s http://localhost:9077/v1/default/banks/oracle/stats
-```
+Call `mcp__hindsight__hindsight_stats(bank="oracle")`. If `pending_operations > 0`, stop and tell the user:
 
-If `pending_operations > 0`, stop and tell the user:
-> **Daemon has pending operations — reflect may be incomplete. Wait for `pending_operations: 0` before synthesizing.**
+> **Daemon has pending operations — synthesis may be incomplete. Wait for `pending_operations: 0` before synthesizing.**
+
+If the call errors with daemon-unavailable, surface the start command and stop.
 
 ### Step 2 — Determine next OBS-NNN ID
 
-Run:
-```bash
-curl -s http://localhost:9077/v1/default/banks/oracle/documents
-```
-
-Parse the response for any `id` matching `OBS-\d+`. Find the highest number. Next ID is that number + 1, zero-padded to 3 digits. If none exist, start at `OBS-001`.
+Call `mcp__hindsight__hindsight_list_documents(bank="oracle", prefix="OBS-")`. Highest `id` numeric suffix + 1, zero-padded. Start at `OBS-001` if none.
 
 ### Step 3 — Recall + synthesis subagent
 
-Synthesis used to be a daemon-side `/reflect` call (paid API). It now
-runs as `/recall` (retrieval) + a Sonnet subagent dispatched from this
-session (subscription tokens). See
-`.claude/.decisions/CDR-subscription-llm-routing.md`.
+Synthesis runs as MCP recall + Sonnet subagent dispatch (subscription tokens). See `.claude/.decisions/CDR-subscription-llm-routing.md`.
 
-**Important:** `$ARGUMENTS` may contain shell-special characters
-(apostrophes, backticks, `$`). Do **not** embed it in any bash command
-line — the harness substitutes the text into the script body before
-bash parses it, so shell escaping does not protect you.
-
-**Step 3a — write the query to a file via the `Write` tool** (not via
-shell). Target path: `/tmp/oracle_synthesize_query.txt`. If `$ARGUMENTS`
-is non-empty, write its contents. Otherwise write the default query:
+**Step 3a — Determine the query.** If `$ARGUMENTS` is non-empty, use it. Otherwise use the default:
 
 > What patterns define how I make decisions? Cite specific PHI and OBS IDs (e.g., PHI-001, OBS-001) in your response to ground the synthesis.
 
-**Step 3b — recall a wide spread of corpus entries** for the subagent:
+**Step 3b — Recall a wide spread of corpus entries** via `mcp__hindsight__hindsight_recall`:
 
-```bash
-python3 -c "
-import json, urllib.request
-q = open('/tmp/oracle_synthesize_query.txt').read().rstrip('\n')
-payload = {'query': q, 'budget': 'high', 'max_tokens': 8192}
-req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/memories/recall',
-    data=json.dumps(payload).encode(),
-    headers={'Content-Type': 'application/json'},
-    method='POST'
-)
-with urllib.request.urlopen(req, timeout=60) as resp:
-    d = json.loads(resp.read())
-    slim = []
-    for r in d.get('results', [])[:20]:
-        item = {k: r.get(k) for k in ('text', 'type', 'document_id', 'mentioned_at', 'metadata') if r.get(k) is not None}
-        slim.append(item)
-    print(json.dumps(slim))
-" > /tmp/oracle_synthesize_recall.json
-```
+- `bank`: `"oracle"`
+- `query`: the query text from 3a (typed string arg — no `/tmp` staging needed)
+- `budget`: `"high"` (synthesize uses higher budget than other recall callers)
+- `max_tokens`: `8192`
+- `top_n`: `20`
 
-If the recall result is empty:
+The result is the slim top-20 — pass directly to step 3c as `{RESULTS_JSON}`.
+
+If the result is empty:
 > **Recall returned no entries — bank may have insufficient content. Do not retain.**
 
-**Step 3c — dispatch a synthesis subagent** via the `Agent` tool with:
+**Step 3c — Dispatch a synthesis subagent** via the `Agent` tool with:
 
 - `subagent_type`: `general-purpose`
 - `model`: `sonnet`
 - `description`: `Oracle synthesis (cross-corpus pattern)`
-- `prompt`: a self-contained brief built from the template below.
-  Read `/tmp/oracle_synthesize_query.txt` (the query) and
-  `/tmp/oracle_synthesize_recall.json` (the corpus sample) into the
-  prompt body inline.
+- `prompt`: build the brief below, inlining the query and the slim recall result as JSON.
 
 Synthesis brief template:
 
@@ -166,40 +133,20 @@ Wait for explicit confirmation. Do not retain without it.
 
 ### Step 7 — Retain to oracle bank
 
-```bash
-python3 -c "
-import json, urllib.request, datetime
+After explicit user confirmation in step 6, call `mcp__hindsight__hindsight_retain_obs`:
 
-content = '''CURATED_CONTENT_HERE'''
-obs_id = 'OBS_ID_HERE'
-derived_from = DERIVED_FROM_LIST_HERE
-query = 'QUERY_HERE'
-
-payload = {
-    'items': [{
-        'content': content,
-        'context': 'observation',
-        'document_id': obs_id,
-        'metadata': {
-            'type': 'observation',
-            'date': datetime.date.today().isoformat(),
-            'derived_from': ', '.join(derived_from),
-            'query': query
-        }
-    }]
-}
-req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/memories',
-    data=json.dumps(payload).encode(),
-    headers={'Content-Type': 'application/json'},
-    method='POST'
-)
-with urllib.request.urlopen(req, timeout=30) as resp:
-    print(json.dumps(json.loads(resp.read()), indent=2))
-"
-```
-
-Replace placeholders with confirmed values.
+- `bank`: `"oracle"`
+- `document_id`: e.g., `"OBS-013"` (from step 2)
+- `content`: the curated text from step 4
+- `derived_from`: comma-separated PHI/OBS IDs extracted in step 5
+- `metadata`:
+  ```json
+  {
+    "type": "observation",
+    "date": "<YYYY-MM-DD today>",
+    "query": "<the synthesis query>"
+  }
+  ```
 
 ### Step 8 — Confirm completion
 
