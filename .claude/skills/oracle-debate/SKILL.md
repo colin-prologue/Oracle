@@ -97,57 +97,28 @@ Wait for the user's response. This is the debate step — the user may challenge
 
 ### Step 4 — Retain to oracle bank
 
-Once confirmed, run the retain below.
+Once confirmed in step 3, call the `mcp__hindsight__hindsight_retain_phi` tool:
 
-The bank `phi` content **must not include the `<!-- ORACLE ARTIFACT -->` banner** — that banner is a filesystem-only safeguard and adds retrieval noise if embedded. Build the bank payload starting at the `## PHI-{NNN}` heading; add the banner only when writing the file in Step 5.
+- `bank`: `"oracle"`
+- `document_id`: e.g., `"PHI-020"` (computed in step 1)
+- `content`: the full confirmed PHI markdown, **starting at the `## PHI-NNN ...` heading — NOT including the `<!-- ORACLE ARTIFACT -->` banner**. The banner is filesystem-only; embedding it in the bank adds retrieval noise.
+- `derived_from`: any related PHI/OBS IDs cited in the debate, comma-separated; or omit if none
+- `metadata`:
+  ```json
+  {
+    "type": "philosophy",
+    "domain": "<from the PHI domain field>",
+    "date": "<YYYY-MM-DD today>",
+    "source": "oracle-debate",
+    "source_project": "<from step 1>"
+  }
+  ```
 
-```bash
-python3 -c "
-import json, urllib.request, datetime
+If the tool errors with a daemon connection failure:
+- Surface: **Oracle unavailable** — see daemon start instructions in `/oracle` skill
+- **Still write the PHI file in step 5** (don't lose the capture). The bank-first invariant is best-effort: when the bank is genuinely unreachable, the file copy is the fallback record.
 
-phi = '''FULL_PHI_CONTENT_HERE'''  # starts at '## PHI-NNN ...' — no banner
-
-domain = 'PHI_DOMAIN_HERE'
-phi_id = 'PHI_ID_HERE'
-source_project = 'SOURCE_PROJECT_HERE'
-today = datetime.date.today().isoformat()
-
-payload = {
-    'items': [{
-        'content': phi,
-        'context': 'philosophy',
-        'document_id': phi_id,
-        'metadata': {
-            'type': 'philosophy',
-            'domain': domain,
-            'date': today,
-            'source': 'oracle-debate',
-            'source_project': source_project
-        }
-    }]
-}
-
-req = urllib.request.Request(
-    'http://localhost:9077/v1/default/banks/oracle/memories',
-    data=json.dumps(payload).encode(),
-    headers={'Content-Type': 'application/json'},
-    method='POST'
-)
-with urllib.request.urlopen(req, timeout=30) as resp:
-    result = json.loads(resp.read())
-    print(json.dumps(result, indent=2))
-"
-```
-
-Replace:
-- `FULL_PHI_CONTENT_HERE` — full confirmed PHI markdown (escape backslashes and triple-quotes)
-- `PHI_DOMAIN_HERE` — domain field from the PHI (e.g., `architecture`)
-- `PHI_ID_HERE` — e.g., `PHI-004`
-- `SOURCE_PROJECT_HERE` — the project captured in Step 1
-
-If the retain call fails with a connection error:
-- Note: **Oracle unavailable** — see daemon start instructions in `/oracle` skill
-- Still write the PHI file in Step 5 (don't lose the capture)
+**Do NOT proceed to step 5 until step 4 has either succeeded OR explicitly fallen through with the daemon-unavailable message.** This preserves the retain-bank-first ordering.
 
 ### Step 5 — Write the canonical PHI file
 
