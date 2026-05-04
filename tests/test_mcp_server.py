@@ -208,6 +208,26 @@ def test_hindsight_recall_surfaces_http_error(mcp_mod, mock_daemon):
 
 
 # ---------------------------------------------------------------------------
+# hindsight_oracle_query
+# ---------------------------------------------------------------------------
+
+
+def test_hindsight_oracle_query_returns_gate_and_results(mcp_mod, mock_daemon, monkeypatch, tmp_path):
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+    fixture = load_fixture("recall")
+    mock_daemon["respond"](fixture, url=RECALL_URL, method="POST")
+    result = mcp_mod.hindsight_oracle_query(bank="oracle", question="q")
+    payload = json.loads(result)
+    assert "RELEVANCE GATE" in payload["instructions"]
+    assert isinstance(payload["results"], list)
+    assert payload["results"]
+
+
+def test_hindsight_oracle_query_handles_empty_question(mcp_mod):
+    assert mcp_mod.hindsight_oracle_query(bank="oracle", question="   ") == "No question provided."
+
+
+# ---------------------------------------------------------------------------
 # hindsight_retain_phi / retain_obs / retain_session_log
 # ---------------------------------------------------------------------------
 

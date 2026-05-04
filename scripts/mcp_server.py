@@ -7,6 +7,7 @@ See: docs/superpowers/specs/2026-04-30-hindsight-mcp-server-design.md
 import datetime
 import json
 import os
+import re
 import urllib.request
 from pathlib import Path
 
@@ -15,6 +16,19 @@ from mcp.server.fastmcp import FastMCP
 mcp = FastMCP("hindsight")
 
 DAEMON_URL = "http://localhost:9077"
+ID_PATTERN = re.compile(r"\b(?:PHI|OBS)-\d{3,}\b")
+RELEVANCE_GATE = (
+    "RELEVANCE GATE — read each entry against the user's question. If none "
+    "is genuinely relevant (i.e., addresses the question's actual subject "
+    "matter, not just sharing surface keywords or topic-adjacent themes), "
+    "tell the user EXACTLY: 'The oracle has no entries relevant to that "
+    "question.' with no padding, summary, or near-miss listing. Empty is a "
+    "valid, accepted outcome. If at least one entry is genuinely relevant, "
+    "synthesize a direct answer that cites PHI-NNN / OBS-NNN identifiers "
+    "(extracted from document_id or embedded in entry text), leads with the "
+    "answer not the reasoning, and surfaces tensions or counter-evidence "
+    "before recommendations."
+)
 
 
 def _get(path: str) -> dict:
@@ -228,6 +242,56 @@ def hindsight_log_query(
     with log_path.open("a") as f:
         f.write(json.dumps(entry) + "\n")
     return {"logged_path": str(log_path)}
+
+
+def _available_ids(results: list[dict]) -> list[str]:
+    ids = set()
+    for item in results:
+        doc_id = item.get("document_id")
+        if doc_id:
+            ids.add(doc_id)
+        ids.update(ID_PATTERN.findall(item.get("text", "")))
+    return sorted(ids)
+
+
+@mcp.tool()
+def hindsight_oracle_query(
+    bank: str,
+    question: str,
+    budget: str = "mid",
+    max_tokens: int = 4096,
+    top_n: int = 10,
+) -> str:
+    """Oracle-mode query on top of hindsight recall.
+
+    Uses the same recall stack as `hindsight_recall`, but returns an opinionated
+    JSON envelope with a relevance-gate instruction for synthesis clients.
+    """
+    if not question or not question.strip():
+        return "No question provided."
+
+    slim = hindsight_recall(
+        bank=bank,
+        query=question,
+        budget=budget,
+        max_tokens=max_tokens,
+        top_n=top_n,
+        verbose=False,
+    )
+    if not slim:
+        return "The oracle has no entries relevant to that question."
+
+    hindsight_log_query(
+        client="codex-mcp",
+        question=question,
+        answer="",
+        recall_data={
+            "result_count": len(slim),
+            "empty": False,
+            "available_ids": _available_ids(slim),
+        },
+    )
+    return json.dumps({"instructions": RELEVANCE_GATE, "results": slim}, ensure_ascii=False, indent=2)
 
 
 def main() -> None:
