@@ -8,8 +8,9 @@ user-invocable: true
 # Oracle Query
 
 Query the Decision Oracle. This retrieves relevant PHIs, OBSs, and session
-memories from the oracle bank, then synthesizes a direct answer to your
-decision question using a Sonnet subagent (subscription tokens, not API).
+memories from the oracle bank through base Hindsight recall, then synthesizes
+a direct answer to your decision question using a Sonnet subagent
+(subscription tokens, not API).
 
 Architecture note: synthesis happens in-session via subagent dispatch rather
 than via the daemon's `/reflect` endpoint. The daemon is retrieval-only for
@@ -27,7 +28,7 @@ If `$ARGUMENTS` is empty, ask the user: "What decision are you facing?"
 
 1. **Check that `$ARGUMENTS` is not empty.** If empty, ask: "What decision are you facing?" before proceeding.
 
-2. **Retrieve relevant memories from the oracle bank.** Call the `mcp__hindsight__hindsight_recall` tool:
+2. **Retrieve relevant memories from the oracle bank through base Hindsight recall.** Call the `mcp__hindsight__hindsight_recall` tool:
 
    - `bank`: `"oracle"`
    - `query`: the user's question (`$ARGUMENTS`) — passed as a typed string arg, no shell escaping needed
@@ -90,6 +91,9 @@ If `$ARGUMENTS` is empty, ask the user: "What decision are you facing?"
    - leads with the answer, not the reasoning;
    - surfaces tensions or counter-evidence in the retrieved memories
      before stating a recommendation;
+   - distinguishes cited Oracle memory from current-session inference;
+   - if a relevant memory lacks a PHI/OBS identifier, cite it with an
+     explicit missing-identifier marker rather than inventing an ID;
    - flags when the bank's evidence is thin or off-topic — say so plainly
      rather than padding;
    - stays under ~250 words unless the question genuinely needs more.
@@ -106,7 +110,19 @@ If `$ARGUMENTS` is empty, ask the user: "What decision are you facing?"
    - `client`: `"claude-code"`
    - `question`: `$ARGUMENTS` (typed string arg, no shell escaping)
    - `answer`: the subagent's full response text
-   - `recall_data`: the recall result from step 2
+   - `recall_data`: a canonical relevance-gate audit object:
+     ```json
+     {
+       "workflow_source": "claude-skill",
+       "recall_substrate": "hindsight:oracle",
+       "outcome": "relevant | empty | irrelevant | failure",
+       "retrieved_ids": ["PHI/OBS IDs returned by recall when available"],
+       "accepted_ids": ["PHI/OBS IDs that passed the relevance gate"],
+       "rejected_ids": ["PHI/OBS IDs rejected by the relevance gate"],
+       "rejection_reasons": {"PHI-000": "short reason"},
+       "result_count": 0
+     }
+     ```
 
    The MCP tool resolves `${HINDSIGHT_ROOT}/.decisions/queries/YYYY-MM.jsonl` internally — no path argument needed.
 

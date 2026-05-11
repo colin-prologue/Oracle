@@ -10,13 +10,18 @@ Key documents:
 
 ## Oracle Skills
 
-- `/oracle "[question]"` — Query the oracle at a decision point. Calls Hindsight `reflect` on the `oracle` bank.
+- `/oracle "[question]"` — Query the oracle at a decision point. Uses base Hindsight recall on the `oracle` bank, applies the Oracle relevance gate, and logs canonical query audit records.
 - `/oracle-debate "[philosophy]"` — Draft, debate, and retain a PHI to the oracle bank and Hindsight's `.decisions/phi/`.
 - `/oracle-observe "[insight]"` — Capture an impromptu observation with fit-check reflect; retains as OBS-NNN.
 - `/oracle-synthesize` — Periodic synthesis: reflect across the corpus, curate, retain as OBS-NNN.
 - `/oracle-preclear` — **Run before `/clear`**. Scans the conversation, proposes PHI/OBS candidates for rapid approval, retains approved ones, writes session summary. No argument needed.
 
 **When to query organically:** Before recommending an architectural approach, picking between technologies, or evaluating a tradeoff, invoke `/oracle` first — even unprompted. The oracle is allowed to come back empty; that's a valid signal, not a failure.
+
+Standalone `mcp/oracle-query` is a compatibility shim for named Codex consumers
+that still require exact legacy response shape. Do not remove it until the
+migration matrix records passing native query/capture/pre-clear tests, explicit
+user approval, and one dogfood session with no blocking regressions.
 
 Daemon runs on `http://localhost:9077` (claude-code profile). Start with:
 ```
@@ -38,6 +43,9 @@ Use `/oracle-debate "[philosophy]"` or `/oracle-observe "[insight]"` mid-session
 ## Active Technologies
 - Python 3.14 (scripts) — no new runtime + Hindsight daemon (http://localhost:9077), hindsight-embed (uvx), Anthropic API (claude-haiku-3) (002-oracle-pattern-modeling)
 - Hindsight oracle bank (postgresql via daemon) + `.decisions/` markdown files (002-oracle-pattern-modeling)
+- Python 3.11+ for existing MCP/scripts; Markdown for skills, specs, and migration docs + Existing `mcp.server.fastmcp.FastMCP`, `httpx`, Python standard library HTTP/JSON/path tooling, Hindsight daemon HTTP API at `localhost:9077` (003-oracle-workflow-layer)
+- Hindsight oracle bank for operational recall/retain; repository-local `.decisions/phi/` and `.decisions/queries/YYYY-MM.jsonl` for durable review/audit mirrors (003-oracle-workflow-layer)
+- Oracle workflow layer over base Hindsight primitives; standalone `mcp/oracle-query` retained only as exact-shape compatibility shim pending deprecation gates (003-oracle-workflow-layer)
 
 ## Recent Changes
 - 002-oracle-pattern-modeling: Added Python 3.14 (scripts) — no new runtime + Hindsight daemon (http://localhost:9077), hindsight-embed (uvx), Anthropic API (claude-haiku-3)

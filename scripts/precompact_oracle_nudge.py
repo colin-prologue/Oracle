@@ -32,8 +32,9 @@ def main() -> int:
 
     reason = (
         f"Auto-compaction is about to fire{budget_line}. To preserve session "
-        "insights in the oracle bank, run `/oracle-preclear` first. After "
-        "that, choose:\n"
+        "insights, run `/oracle-preclear` first. It will propose 0-3 "
+        "high-signal capture candidates for you to approve; unapproved "
+        "candidates are not retained. After that, choose:\n"
         "  - `/compact` — continue the same session with summarized context\n"
         "  - `/clear` — start fresh\n"
         "If you don't care about preserving insights this session, type "

@@ -5,7 +5,7 @@
 #   "httpx>=0.27",
 # ]
 # ///
-"""MCP server exposing the Decision Oracle to MCP clients (Codex desktop/CLI, etc.).
+"""Compatibility MCP server exposing the Decision Oracle to MCP clients.
 
 Wraps the local hindsight-embed daemon's recall endpoint as a single tool,
 `oracle_query`. Returns top-K slim results plus an inline relevance-gate
@@ -14,6 +14,10 @@ instruction the calling model reads when interpreting the results.
 Synthesis happens client-side (the calling model reads the JSON and answers
 the user). Mirrors the relevance discipline used by the Claude Code /oracle
 skill so behavior is consistent across clients.
+
+Migration note: this is a `compat-shim` while Oracle moves into the native
+Hindsight workflow layer in `scripts/mcp_server.py`. It intentionally preserves
+the exact legacy non-empty response shape for the named Codex Oracle connector.
 """
 
 from __future__ import annotations
@@ -32,6 +36,8 @@ DAEMON_URL = "http://localhost:9077/v1/default/banks/oracle/memories/recall"
 TOP_K = 10
 TIMEOUT_SECONDS = 30.0
 ID_PATTERN = re.compile(r"\b(?:PHI|OBS)-\d{3,}\b")
+EXACT_SHAPE_COMPATIBILITY = True
+WORKFLOW_SOURCE = "compat-shim"
 
 RELEVANCE_GATE = (
     "RELEVANCE GATE — read each entry against the user's question. If none "
@@ -69,13 +75,20 @@ def _log_query(question: str, results: list[dict[str, Any]], empty: bool) -> Non
                 available.add(doc_id)
             available.update(ID_PATTERN.findall(item.get("text", "")))
 
+        outcome = "empty" if empty else "relevant"
         entry = {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "client": "codex-mcp",
+            "workflow_source": WORKFLOW_SOURCE,
             "question": question,
+            "answer": "",
+            "recall_substrate": "hindsight:oracle",
+            "retrieved_ids": sorted(available),
+            "accepted_ids": [] if empty else sorted(available),
+            "rejected_ids": [],
+            "rejection_reasons": {},
             "result_count": len(results),
-            "empty": empty,
-            "available_ids": sorted(available),
+            "outcome": outcome,
         }
         month = datetime.now(timezone.utc).strftime("%Y-%m")
         log_file = log_dir / f"{month}.jsonl"

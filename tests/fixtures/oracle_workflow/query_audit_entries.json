@@ -1,0 +1,63 @@
+{
+  "native_relevant": {
+    "client": "claude-code",
+    "workflow_source": "native",
+    "question": "Should this be a workflow layer?",
+    "recall_substrate": "hindsight:oracle",
+    "retrieved_ids": ["PHI-003", "PHI-005"],
+    "accepted_ids": ["PHI-003"],
+    "rejected_ids": ["PHI-005"],
+    "rejection_reasons": {"PHI-005": "Capture workflow relevant but not architecture boundary."},
+    "result_count": 2,
+    "outcome": "relevant"
+  },
+  "native_empty": {
+    "client": "claude-code",
+    "workflow_source": "native",
+    "question": "Should we use an unrelated payment vendor?",
+    "recall_substrate": "hindsight:oracle",
+    "retrieved_ids": [],
+    "accepted_ids": [],
+    "rejected_ids": [],
+    "rejection_reasons": {},
+    "result_count": 0,
+    "outcome": "empty"
+  },
+  "native_irrelevant": {
+    "client": "claude-code",
+    "workflow_source": "native",
+    "question": "Should we use an unrelated payment vendor?",
+    "recall_substrate": "hindsight:oracle",
+    "retrieved_ids": ["PHI-001"],
+    "accepted_ids": [],
+    "rejected_ids": ["PHI-001"],
+    "rejection_reasons": {"PHI-001": "Session independence is not material to this payment decision."},
+    "result_count": 1,
+    "outcome": "irrelevant"
+  },
+  "native_failure": {
+    "client": "claude-code",
+    "workflow_source": "native",
+    "question": "Should this be a workflow layer?",
+    "recall_substrate": "hindsight:oracle",
+    "retrieved_ids": [],
+    "accepted_ids": [],
+    "rejected_ids": [],
+    "rejection_reasons": {},
+    "result_count": 0,
+    "outcome": "failure",
+    "error": "daemon unavailable"
+  },
+  "compat_relevant": {
+    "client": "codex-mcp",
+    "workflow_source": "compat-shim",
+    "question": "Should this be a workflow layer?",
+    "recall_substrate": "hindsight:oracle",
+    "retrieved_ids": ["PHI-003"],
+    "accepted_ids": ["PHI-003"],
+    "rejected_ids": [],
+    "rejection_reasons": {},
+    "result_count": 1,
+    "outcome": "relevant"
+  }
+}

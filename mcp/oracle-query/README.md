@@ -11,6 +11,21 @@ stays consistent across clients: the model applies the gate ("if no entry is
 genuinely relevant, return the empty signal verbatim"). Synthesis happens
 client-side; the server is retrieval-only.
 
+## Migration note
+
+This standalone server is a compatibility path while Oracle moves into a
+workflow layer over base Hindsight primitives. Supported clients must preserve
+the same Oracle semantics during the migration: empty recall and weak-match
+rejection both produce exactly `The oracle has no entries relevant to that
+question.` without near-miss summaries. Removal remains blocked until the
+migration matrix acceptance criteria pass, exact-shape consumers are accounted
+for, and the user approves retirement after a successful dogfood session.
+
+The server is marked `compat-shim` in query audit logs and preserves exact
+legacy JSON response shape for the named Codex Oracle connector. Rollback is
+straightforward while this path remains present: restore `mcp/oracle-query` from
+git and keep the Codex MCP registration pointed at this script.
+
 ## Requirements
 
 - `uv` ≥ 0.10 (resolves PEP 723 inline deps on first run; ~30 packages)
@@ -68,6 +83,9 @@ tool response when synthesizing.
   `results` is the top 10 slim entries (`text`, `type`, `document_id`,
   `mentioned_at`, `metadata`) and `instructions` is the relevance gate.
   Calling model judges relevance and either synthesizes or surfaces empty.
+- **Query audit** → writes canonical `.decisions/queries/YYYY-MM.jsonl` entries
+  with `workflow_source: "compat-shim"` while preserving the response shape
+  above for active Codex consumers.
 
 ## Manual probe
 

@@ -13,6 +13,13 @@ Use this for **ad hoc capture** of insights noticed mid-session. For periodic sy
 
 Note: the Hindsight API does not support updating document content in place. "Extending" an existing observation means creating a new OBS-NNN that cites the predecessor in `derived_from` — the original entry is preserved.
 
+## Canonical locations
+
+OBS captures retain to the oracle bank first. Any markdown mirror or later
+filesystem artifact must be anchored under
+`${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}` and treated as derivative of
+the bank record, never as a project-local source of truth.
+
 ## Arguments
 
 ```
@@ -116,6 +123,13 @@ After explicit user confirmation in step 6, call `mcp__hindsight__hindsight_reta
     "source": "manual"
   }
   ```
+
+If retain fails, do not create the canonical markdown file. Record capture
+audit state `retain-failed` and surface the daemon or retain error to the
+user. The metadata above is source metadata and must travel with the retained
+bank entry when retry succeeds.
+
+When retain succeeds, record capture audit state `retained`.
 
 ### Step 8 — Confirm completion
 

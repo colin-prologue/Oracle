@@ -16,6 +16,14 @@ import unittest
 from pathlib import Path
 
 HARNESS = Path(__file__).resolve().parent.parent / "scripts" / "test-hooks.py"
+PRECOMPACT_NUDGE = (
+    Path(__file__).resolve().parent.parent / "scripts" / "precompact_oracle_nudge.py"
+)
+USERPROMPT_NUDGE = (
+    Path(__file__).resolve().parent.parent
+    / "scripts"
+    / "userprompt_oracle_capture_nudge.py"
+)
 
 
 def run_harness(settings_files):
@@ -101,6 +109,38 @@ class HarnessTests(unittest.TestCase):
             code, out, err = run_harness([settings])
             self.assertIn("FAIL", out)
             self.assertNotEqual(code, 0)
+
+    def test_oracle_preclear_nudge_is_proposal_based(self):
+        proc = subprocess.run(
+            ["python3", str(PRECOMPACT_NUDGE)],
+            input=json.dumps({"context_used": 90, "tokens_remaining": 10}),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["decision"], "block")
+        reason = payload["reason"]
+        self.assertIn("propose 0-3 high-signal capture candidates", reason)
+        self.assertIn("approve", reason)
+        self.assertIn("unapproved candidates are not retained", reason)
+
+    def test_capture_intent_nudge_preserves_deliberate_approval(self):
+        proc = subprocess.run(
+            ["python3", str(USERPROMPT_NUDGE)],
+            input=json.dumps({"prompt": "let's capture this pattern"}),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+        payload = json.loads(proc.stdout)
+        context = payload["additionalContext"]
+        self.assertIn("Don't auto-invoke", context)
+        self.assertIn("explicit user approval", context)
 
 
 if __name__ == "__main__":

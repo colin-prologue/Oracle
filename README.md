@@ -30,7 +30,7 @@ You work across multiple projects simultaneously. Lessons learned under pressure
 The oracle closes that loop:
 
 - **Before a decision** — auto-recall injects relevant PHIs and OBSs into your Claude session context
-- **At a decision point** — `/oracle "[question]"` runs a targeted reflect query to surface applicable patterns
+- **At a decision point** — `/oracle "[question]"` runs targeted Hindsight recall with the Oracle relevance gate to surface applicable patterns
 - **When a new pattern emerges** — `/oracle-debate` or `/oracle-observe` captures it before the session ends
 - **Periodically** — `/oracle-synthesize` synthesizes new OBSs from accumulated session logs and PHIs
 
@@ -38,7 +38,7 @@ The oracle closes that loop:
 
 ## How It Works
 
-The oracle is built on [Hindsight](https://github.com/vectorize-io/hindsight), a local memory daemon that provides semantic recall and synthesis across retained memories. It integrates with Claude Code via the native plugin hook system — not an MCP server.
+The oracle is built on [Hindsight](https://github.com/vectorize-io/hindsight), a local memory daemon that provides semantic recall across retained memories. Oracle behavior is a workflow layer of skills, commands, hooks, instructions, and capture rituals over base Hindsight primitives, rather than a separate Oracle-specific runtime path.
 
 ```
 Session starts
@@ -55,6 +55,11 @@ Session ends
 ```
 
 Retention is deliberate. `autoRetain` is disabled — the bank fills with noise faster than reflection can surface patterns when every exchange is retained automatically. Every entry in the oracle earned its place.
+
+During the workflow-layer migration, the standalone `mcp/oracle-query` server
+remains only as a compatibility shim for named active consumers that require
+its exact legacy response shape. Native Oracle behavior should be implemented
+through base Hindsight recall, retain, and query logging helpers.
 
 ---
 
@@ -109,7 +114,7 @@ claude plugin install hindsight-memory
 /oracle "Should I wire this as a daemon or a session-scoped process?"
 ```
 
-Runs a `reflect` query across the oracle bank and surfaces applicable PHIs and OBSs.
+Runs base Hindsight recall across the oracle bank, applies the Oracle relevance gate, and surfaces applicable PHIs and OBSs. If no retrieved memory is genuinely relevant, the correct answer is exactly `The oracle has no entries relevant to that question.`
 
 ### Capture a new philosophy
 
@@ -161,6 +166,10 @@ At session end, retain a 3–5 sentence summary covering what was decided, what 
 ```
 
 PHI files are committed to this repo — git history is the auditable record. Hindsight is not the source of truth; it is the query interface.
+
+Query attempts are reviewed from `.decisions/queries/YYYY-MM.jsonl`. Native and
+compatibility paths write the same canonical audit shape with outcome, source,
+retrieved IDs, accepted IDs, rejected IDs, and rejection reasons.
 
 ---
 

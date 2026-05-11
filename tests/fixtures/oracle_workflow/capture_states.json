@@ -1,0 +1,59 @@
+{
+  "proposed": {
+    "client": "claude-code",
+    "workflow_source": "oracle-preclear",
+    "candidate_type": "PHI",
+    "document_id": "PHI-999",
+    "state": "proposed"
+  },
+  "approved": {
+    "client": "claude-code",
+    "workflow_source": "oracle-debate",
+    "candidate_type": "PHI",
+    "document_id": "PHI-999",
+    "state": "approved"
+  },
+  "rejected": {
+    "client": "claude-code",
+    "workflow_source": "oracle-preclear",
+    "candidate_type": "OBS",
+    "document_id": "OBS-999",
+    "state": "rejected"
+  },
+  "retained": {
+    "client": "claude-code",
+    "workflow_source": "oracle-observe",
+    "candidate_type": "OBS",
+    "document_id": "OBS-999",
+    "state": "retained",
+    "bank_status": "retained",
+    "markdown_status": "not-written"
+  },
+  "file_written": {
+    "client": "claude-code",
+    "workflow_source": "oracle-debate",
+    "candidate_type": "PHI",
+    "document_id": "PHI-999",
+    "state": "file-written",
+    "bank_status": "retained",
+    "markdown_status": "written"
+  },
+  "file_write_failed": {
+    "client": "claude-code",
+    "workflow_source": "oracle-debate",
+    "candidate_type": "PHI",
+    "document_id": "PHI-999",
+    "state": "bank-retained/file-write-failed",
+    "bank_status": "retained",
+    "markdown_status": "write-failed"
+  },
+  "retain_failed": {
+    "client": "claude-code",
+    "workflow_source": "oracle-observe",
+    "candidate_type": "OBS",
+    "document_id": "OBS-999",
+    "state": "retain-failed",
+    "bank_status": "retain-failed",
+    "markdown_status": "not-written"
+  }
+}

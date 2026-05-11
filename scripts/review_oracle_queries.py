@@ -17,6 +17,42 @@ import sys
 from pathlib import Path
 
 
+def normalize_query_entry(entry: dict) -> dict:
+    """Normalize canonical and legacy query log entries for review output."""
+    recall_data = entry.get("recall_data") or {}
+    outcome = entry.get("outcome")
+    if not outcome:
+        outcome = "empty" if recall_data.get("empty") else "relevant"
+
+    ids = (
+        entry.get("accepted_ids")
+        or entry.get("cited_ids")
+        or entry.get("available_ids")
+        or recall_data.get("cited_ids")
+        or recall_data.get("available_ids")
+        or []
+    )
+    rejected_ids = entry.get("rejected_ids") or recall_data.get("rejected_ids") or []
+    rejection_reasons = (
+        entry.get("rejection_reasons")
+        or recall_data.get("rejection_reasons")
+        or {}
+    )
+
+    return {
+        "timestamp": entry.get("timestamp") or entry.get("ts") or "?",
+        "client": entry.get("client", "?"),
+        "source": entry.get("workflow_source") or entry.get("source") or "legacy",
+        "outcome": outcome,
+        "question": entry.get("question", ""),
+        "answer": entry.get("answer", ""),
+        "result_count": entry.get("result_count", recall_data.get("result_count", 0)),
+        "ids": ids,
+        "rejected_ids": rejected_ids,
+        "rejection_reasons": rejection_reasons,
+    }
+
+
 def main() -> int:
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 20
 
@@ -48,14 +84,27 @@ def main() -> int:
         return 0
 
     for e in entries:
-        empty_marker = " [EMPTY]" if e.get("empty") else ""
-        client = e.get("client", "?")
-        ids = e.get("cited_ids") or e.get("available_ids") or []
-        ids_str = ", ".join(ids) if ids else "—"
-        print(f"\n{e.get('ts', '?')}  ({client}){empty_marker}")
-        print(f"  Q: {e.get('question', '')}")
-        print(f"  results={e.get('result_count', 0)}  ids={ids_str}")
-        if (answer := e.get("answer")) and not e.get("empty"):
+        normalized = normalize_query_entry(e)
+        empty_marker = " [EMPTY]" if normalized["outcome"] == "empty" else ""
+        ids_str = ", ".join(normalized["ids"]) if normalized["ids"] else "—"
+        rejected_str = (
+            ", ".join(normalized["rejected_ids"])
+            if normalized["rejected_ids"]
+            else "—"
+        )
+        print(
+            f"\n{normalized['timestamp']}  ({normalized['client']}; "
+            f"{normalized['source']}; {normalized['outcome']}){empty_marker}"
+        )
+        print(f"  Q: {normalized['question']}")
+        print(
+            f"  results={normalized['result_count']}  ids={ids_str}  "
+            f"rejected={rejected_str}"
+        )
+        if normalized["rejection_reasons"]:
+            for doc_id, reason in normalized["rejection_reasons"].items():
+                print(f"  reject {doc_id}: {reason}")
+        if (answer := normalized["answer"]) and normalized["outcome"] != "empty":
             preview = answer.replace("\n", " ").strip()
             if len(preview) > 200:
                 preview = preview[:200] + "..."
