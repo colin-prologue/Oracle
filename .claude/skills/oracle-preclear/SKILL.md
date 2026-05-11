@@ -71,7 +71,8 @@ For each candidate, classify as:
 - **PHI** — a prescriptive held opinion ("prefer X over Y when Z")
 - **OBS** — a descriptive pattern or observation
 
-If nothing qualifies, say so clearly and skip to Step 5.
+If nothing qualifies, say so clearly and skip to Step 5. Do not create no filler
+candidates to satisfy the list. Do not retain unapproved candidates.
 
 Present each candidate one at a time:
 
@@ -110,7 +111,7 @@ Derive a filename slug from the title (lowercase, spaces to hyphens, strip punct
   }
   ```
 
-Do NOT proceed to the file write below until the MCP retain call returns successfully (or explicitly errors with daemon-unavailable). This preserves the bank-first invariant: a mid-run auto-compact between bank-retain and file-write only orphans the regenerable file copy, never the canonical record.
+Do NOT proceed to the file write below until the MCP retain call returns successfully. If retain fails, do not create the canonical markdown file. Record capture audit state `retain-failed` and leave the candidate unretained for retry. This preserves the bank-first invariant: a mid-run auto-compact between bank-retain and file-write only orphans the regenerable file copy, never the canonical record.
 
 **Then write the derivative file** to `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/PHI-{NNN}-{slug}.md` — **never** to the current project's directory. The file is a convenience copy for browsing; the bank is source of truth.
 
@@ -144,6 +145,8 @@ The first line is a banner that self-identifies the file as an oracle artifact, 
 
 Use the Write tool with an **absolute path** built from `$HINDSIGHT_ROOT` (or `$HOME/Developer/Hindsight`) — not `$(pwd)` and not a relative path. If the path does not resolve to the Hindsight repo, stop and surface the error.
 
+If the bank retain succeeded but this markdown write fails, report partial success and retry or regenerate the markdown without duplicating the retained bank entry. Record capture audit state `bank-retained/file-write-failed`. When the file write succeeds, record capture audit state `file-written`.
+
 Increment the PHI counter before the next PHI candidate in this session.
 
 **For OBS candidates:**
@@ -164,6 +167,8 @@ Call `mcp__hindsight__hindsight_retain_obs`:
   ```
 
 Increment the OBS counter before the next OBS candidate.
+
+For each candidate transition, record capture audit state using the canonical Oracle capture audit shape: `proposed`, `approved`, `rejected`, `retained`, `bank-retained/file-write-failed`, `file-written`, or `retain-failed`.
 
 ### Step 5 — Generate and retain session summary
 

@@ -1,0 +1,22 @@
+{
+  "required_targets": [
+    ".claude/skills/oracle/SKILL.md",
+    ".claude/skills/oracle-debate/SKILL.md",
+    ".claude/skills/oracle-observe/SKILL.md",
+    ".claude/skills/oracle-preclear/SKILL.md",
+    ".claude/skills/oracle-synthesize/SKILL.md",
+    "scripts/mcp_server.py",
+    "mcp/oracle-query/server.py",
+    "mcp/oracle-query/README.md",
+    "scripts/review_oracle_queries.py",
+    "scripts/precompact_oracle_nudge.py",
+    "scripts/userprompt_oracle_capture_nudge.py",
+    ".decisions/queries/*.jsonl",
+    ".decisions/phi/*.md",
+    "README.md",
+    "CLAUDE.md"
+  ],
+  "exact_shape_consumers": [
+    "mcp/oracle-query/server.py"
+  ]
+}

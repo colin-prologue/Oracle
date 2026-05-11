@@ -39,10 +39,11 @@ NUDGE = (
     "- `/oracle-debate \"[brief description]\"` — for cross-project philosophies (PHIs)\n"
     "- `/oracle-observe \"[insight]\"` — for impromptu observations (OBSs)\n"
     "\n"
-    "Don't auto-invoke. Let the user confirm. If the content is session-specific "
-    "or about the user themselves (preferences, role) rather than a cross-project "
-    "decision pattern, the auto-memory system handles it without oracle involvement — "
-    "in that case, skip the recommendation."
+    "Don't auto-invoke. Require explicit user approval before any Oracle retain. "
+    "If the content is session-specific or about the user themselves "
+    "(preferences, role) rather than a cross-project decision pattern, the "
+    "auto-memory system handles it without oracle involvement — in that case, "
+    "skip the recommendation."
 )
 
 

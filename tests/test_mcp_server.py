@@ -208,6 +208,26 @@ def test_hindsight_recall_surfaces_http_error(mcp_mod, mock_daemon):
 
 
 # ---------------------------------------------------------------------------
+# hindsight_oracle_query
+# ---------------------------------------------------------------------------
+
+
+def test_hindsight_oracle_query_returns_gate_and_results(mcp_mod, mock_daemon, monkeypatch, tmp_path):
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+    fixture = load_fixture("recall")
+    mock_daemon["respond"](fixture, url=RECALL_URL, method="POST")
+    result = mcp_mod.hindsight_oracle_query(bank="oracle", question="q")
+    payload = json.loads(result)
+    assert "RELEVANCE GATE" in payload["instructions"]
+    assert isinstance(payload["results"], list)
+    assert payload["results"]
+
+
+def test_hindsight_oracle_query_handles_empty_question(mcp_mod):
+    assert mcp_mod.hindsight_oracle_query(bank="oracle", question="   ") == "No question provided."
+
+
+# ---------------------------------------------------------------------------
 # hindsight_retain_phi / retain_obs / retain_session_log
 # ---------------------------------------------------------------------------
 
@@ -392,3 +412,25 @@ def test_hindsight_log_query_never_uses_cwd(mcp_mod, tmp_path, monkeypatch):
     # The consumer project must remain untouched.
     assert not (consumer_project / ".decisions").exists()
     assert (hindsight / ".decisions" / "queries").exists()
+
+
+def test_hindsight_artifact_path_anchors_queries_and_markdown_to_hindsight_root(
+    mcp_mod, tmp_path, monkeypatch
+):
+    consumer_project = tmp_path / "TravelPlanner"
+    consumer_project.mkdir()
+    hindsight = tmp_path / "Hindsight"
+    hindsight.mkdir()
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(hindsight))
+    monkeypatch.chdir(consumer_project)
+
+    assert mcp_mod.hindsight_artifact_path(".decisions", "queries") == (
+        hindsight / ".decisions" / "queries"
+    )
+    assert mcp_mod.oracle_markdown_path("PHI-015") == (
+        hindsight / ".decisions" / "phi" / "PHI-015.md"
+    )
+    assert mcp_mod.oracle_markdown_path("OBS-011") == (
+        hindsight / ".decisions" / "obs" / "OBS-011.md"
+    )
+    assert not (consumer_project / ".decisions").exists()

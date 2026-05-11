@@ -116,9 +116,10 @@ Once confirmed in step 3, call the `mcp__hindsight__hindsight_retain_phi` tool:
 
 If the tool errors with a daemon connection failure:
 - Surface: **Oracle unavailable** — see daemon start instructions in `/oracle` skill
-- **Still write the PHI file in step 5** (don't lose the capture). The bank-first invariant is best-effort: when the bank is genuinely unreachable, the file copy is the fallback record.
+- Record capture audit state `retain-failed`
+- Stop. If retain fails, do not create the canonical markdown file. The user can retry after the daemon is available.
 
-**Do NOT proceed to step 5 until step 4 has either succeeded OR explicitly fallen through with the daemon-unavailable message.** This preserves the retain-bank-first ordering.
+**Do NOT proceed to step 5 until step 4 has succeeded.** This preserves the retain-bank-first ordering.
 
 ### Step 5 — Write the canonical PHI file
 
@@ -131,6 +132,10 @@ ${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/PHI-{NNN}-{slug}.md
 ```
 
 If the resolved path does not point at the Hindsight repo, stop and surface the error. The file is a browsable derivative of the bank record — the bank retain in Step 4 is the canonical store.
+
+If the bank retain succeeded but this markdown write fails, report partial success and retry or regenerate the markdown without duplicating the retained bank entry. Record capture audit state `bank-retained/file-write-failed`. When the file write succeeds, record capture audit state `file-written`.
+
+For each transition, record capture audit state using the canonical Oracle capture audit shape: `approved`, `retained`, `bank-retained/file-write-failed`, `file-written`, or `retain-failed`.
 
 ### Step 6 — Confirm completion
 

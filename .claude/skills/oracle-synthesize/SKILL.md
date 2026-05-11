@@ -89,6 +89,12 @@ Write a markdown OBS body that:
   text. Use `document_id` for `experience`-type entries; for
   `observation`-type entries the IDs are usually embedded in the body
   (e.g., "PHI-005 principle…"). Do not invent IDs;
+- names tensions, counter-evidence, or limits in the corpus before
+  stating the synthesized pattern when the sample points in more than
+  one direction;
+- distinguishes cited Oracle memory from current-session inference;
+- if a relevant memory lacks a PHI/OBS identifier, mark the citation gap
+  explicitly rather than inventing an ID;
 - is suitable for direct retention (no preamble, no meta-commentary, no
   trailing orientation block);
 - stays under ~200 words;
