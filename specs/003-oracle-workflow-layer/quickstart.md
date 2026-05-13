@@ -111,9 +111,10 @@ Expected:
 - Audit entries use the canonical record shape and include compatibility source markers.
 - Migration notes exist for shape changes.
 
-## 10. Standalone `oracle-query` Deprecation Gate
+## 10. Standalone `oracle-query` Deprecation Record
 
-Before removing or disabling `mcp/oracle-query`, confirm:
+Before the standalone `mcp/oracle-query` path was removed, the workflow
+confirmed:
 
 - native query tests pass;
 - native capture tests pass;
@@ -151,9 +152,10 @@ After this plan is accepted:
   - Interpretation: sandboxed localhost access failed; the Hindsight daemon was
     healthy outside the sandbox.
 - Dogfood outcome:
-  - Manual MCP/workflow dogfood is still pending; daemon health is no longer the
-    blocker.
-  - Standalone `mcp/oracle-query` removal remains blocked.
+  - Manual MCP/workflow dogfood was pending at the time of this check; daemon
+    health was no longer the blocker.
+  - Later 2026-05-13 checks completed native dogfood and unblocked standalone
+    removal.
 
 ### 2026-05-10 Compatibility Dogfood
 
@@ -165,8 +167,8 @@ After this plan is accepted:
   - Query audit log contains canonical fields with `workflow_source:
     "compat-shim"`, `outcome: "relevant"`, retrieved IDs, accepted IDs, rejected
     IDs, and rejection reasons.
-- Remaining gate:
-  - Native replacement dogfood and explicit user approval are still required
+- Remaining gate at the time:
+  - Native replacement dogfood and explicit user approval were still required
     before removing `mcp/oracle-query`.
 
 ### 2026-05-13 Active Consumer Audit and Native Audit Remediation
@@ -199,5 +201,18 @@ After this plan is accepted:
   - The most recent `compat-shim` entry remains
     `2026-05-13T18:46:35.217579+00:00`, before the migrated fresh-session
     dogfood.
-  - Standalone `mcp/oracle-query` removal is still blocked by pending explicit
-    approval.
+  - Standalone `mcp/oracle-query` removal was then approved by user request to
+    continue with the cleanup PR on 2026-05-13.
+
+### 2026-05-13 Standalone Cleanup
+
+- User approval:
+  - Explicit approval was recorded by the request to continue with the cleanup
+    PR on 2026-05-13.
+- Removal:
+  - Standalone `mcp/oracle-query` files were removed after native tests,
+    migrated Codex config, and fresh-session native dogfood passed.
+- Current state:
+  - Oracle query behavior uses native Hindsight MCP workflow helpers.
+  - Historical `compat-shim` audit entries remain reviewable, but no active
+    local config requires the exact legacy response shape.

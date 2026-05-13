@@ -84,7 +84,7 @@ tests/
 └── fixtures/daemon/               # Recorded daemon-shape fixtures
 ```
 
-**Structure Decision**: This is an in-place migration of local tooling. New work should prefer `scripts/mcp_server.py`, `.claude/skills/oracle*`, `.decisions/`, and tests under `tests/`. The standalone `mcp/oracle-query` path remains only as a compatibility/deprecation target unless the migration matrix identifies an active consumer that requires exact legacy response shape.
+**Structure Decision**: This is an in-place migration of local tooling. New work should prefer `scripts/mcp_server.py`, `.claude/skills/oracle*`, `.decisions/`, and tests under `tests/`. The standalone `mcp/oracle-query` path was retained only as a compatibility/deprecation target until the migration matrix found no active consumer requiring exact legacy response shape.
 
 ## Complexity Tracking
 

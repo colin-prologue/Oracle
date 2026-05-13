@@ -6,17 +6,17 @@ The standalone `mcp/oracle-query` path was found as an active Codex
 compatibility path during the audit. Follow-up local remediation migrated Codex
 configuration to the native Hindsight MCP server. The native Hindsight workflow
 is healthy, and fresh-session Codex dogfood confirms successful native audit
-logging. Standalone removal should still wait for explicit approval.
+logging. Standalone removal was later approved and performed.
 
 ## Consumer Inventory
 
 | Consumer | Config path | Uses `mcp/oracle-query`? | Needs exact shape? | Replacement path | Removal blocker |
 |---|---|---:|---:|---|---|
-| Codex desktop | `/Users/colindwan/.codex/config.toml` | no after local migration | no after local migration | native Hindsight MCP Oracle workflow | explicit removal approval pending |
-| Codex CLI | `/Users/colindwan/.codex/config.toml` | no after local migration | no after local migration | native Hindsight MCP Oracle workflow | explicit removal approval pending |
+| Codex desktop | `/Users/colindwan/.codex/config.toml` | no after local migration | no after local migration | native Hindsight MCP Oracle workflow | none |
+| Codex CLI | `/Users/colindwan/.codex/config.toml` | no after local migration | no after local migration | native Hindsight MCP Oracle workflow | none |
 | Claude Code skills | `/Users/colindwan/.claude/settings.json`, repo `.claude/skills/oracle*` | no | no | `mcp__hindsight__*` tools | none found locally |
-| Repo documentation/tests | `specs/003-oracle-workflow-layer/*`, `tests/test_oracle_workflow_layer.py`, `mcp/oracle-query/README.md` | references only | documented for compatibility | native Hindsight workflow helpers | removal criteria still pending |
-| Query audit logs | `.decisions/queries/2026-05.jsonl` | historical evidence of use | no active exact-shape need found | canonical native audit records | explicit removal approval pending |
+| Repo documentation/tests | `specs/003-oracle-workflow-layer/*`, `tests/test_oracle_workflow_layer.py` | references only | no active exact-shape need found | native Hindsight workflow helpers | none |
+| Query audit logs | `.decisions/queries/2026-05.jsonl` | historical evidence of use | no active exact-shape need found | canonical native audit records | none |
 
 ## Checks Performed
 
@@ -55,7 +55,7 @@ the native relevant-result path writes canonical native audit fields.
 
 ## Decision
 
-Keep `mcp/oracle-query` enabled until explicit removal approval is recorded.
-Removal requires a separate cleanup PR after:
-
-- Explicit user approval for standalone removal is recorded.
+Explicit removal approval was recorded by the request to continue with the
+cleanup PR on 2026-05-13. The standalone `mcp/oracle-query` files were removed
+after native workflow tests, migrated Codex config, and fresh-session dogfood
+passed.
