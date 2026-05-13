@@ -168,3 +168,36 @@ After this plan is accepted:
 - Remaining gate:
   - Native replacement dogfood and explicit user approval are still required
     before removing `mcp/oracle-query`.
+
+### 2026-05-13 Active Consumer Audit and Native Audit Remediation
+
+- Local/repo consumer audit:
+  - Initial audit found Codex config registering standalone
+    `mcp/oracle-query/server.py` in `/Users/colindwan/.codex/config.toml`.
+  - Follow-up local migration changed Codex config to register native
+    `scripts/mcp_server.py` as the `hindsight` MCP server and updated
+    `/Users/colindwan/.codex/AGENTS.md` to call `hindsight_oracle_query`.
+  - Claude active settings use native `mcp__hindsight__*` tools and do not
+    point at standalone `mcp/oracle-query`.
+  - Fresh-session Codex dogfood confirmed the migrated config uses native
+    Hindsight audit logging.
+- Native dogfood remediation:
+  - Before remediation, the native non-empty `hindsight_oracle_query` branch
+    returned the native envelope but wrote a legacy-shaped query audit entry.
+  - The native branch now logs the canonical gate payload with
+    `workflow_source: "native"` and `recall_substrate: "hindsight:oracle"`.
+  - Regression coverage asserts that relevant native query results write
+    canonical native audit fields.
+- Dogfood query:
+  `Before retiring standalone oracle-query, what native Hindsight workflow evidence should we require?`
+- Result:
+  - Native replacement dogfood retrieved PHI evidence through Hindsight and
+    wrote a canonical `native` query audit entry on 2026-05-13.
+  - Fresh-session Codex dogfood for the new-project Oracle DB access question
+    wrote `workflow_source: "native"` at
+    `2026-05-13T18:51:32.244864+00:00`.
+  - The most recent `compat-shim` entry remains
+    `2026-05-13T18:46:35.217579+00:00`, before the migrated fresh-session
+    dogfood.
+  - Standalone `mcp/oracle-query` removal is still blocked by pending explicit
+    approval.

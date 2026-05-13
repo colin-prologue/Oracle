@@ -24,11 +24,18 @@
 - Native capture acceptance tests: pass (`uvx --from mcp --with pytest pytest`, 2026-05-07)
 - Pre-clear candidate tests: pass (`uvx --from mcp --with pytest pytest`, 2026-05-07)
 - Matrix completeness: pass (`tests/test_oracle_workflow_layer.py`)
-- Exact-shape active consumers: `mcp/oracle-query/server.py` for Codex Oracle connector
+- Exact-shape active consumers: no active local config reference found after
+  Codex config migration and fresh-session native dogfood on 2026-05-13
 - Compatibility audit source markers: pass (`compat-shim` canonical audit shape)
 - Migration notes and rollback instructions: pass (`mcp/oracle-query/README.md`, `README.md`, `CLAUDE.md`)
 - Explicit user approval for removal: pending
+- Active consumer audit: pass; `/Users/colindwan/.codex/config.toml`
+  now registers native `scripts/mcp_server.py`, fresh-session Codex dogfood
+  logged `workflow_source: "native"`, and no new `compat-shim` entry was
+  created by the successful query
 - Manual dogfood session with no blocking regressions: partial pass; compatibility
   `oracle-query` dogfood logged canonical `compat-shim` audit on 2026-05-10,
-  native replacement dogfood still pending
-- Removal action: not performed; standalone `mcp/oracle-query` remains enabled until pending gates pass
+  native replacement dogfood logged canonical `native` audit on 2026-05-13,
+  and migrated Codex fresh-session dogfood logged canonical `native` audit at
+  2026-05-13T18:51:32.244864+00:00
+- Removal action: not performed; standalone `mcp/oracle-query` remains enabled until explicit approval gate passes

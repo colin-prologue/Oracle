@@ -594,9 +594,9 @@ def hindsight_oracle_query(
         question=question,
         answer="",
         recall_data={
-            "result_count": len(slim),
-            "empty": False,
-            "available_ids": _available_ids(slim),
+            **envelope["gate"],
+            "workflow_source": "native",
+            "recall_substrate": f"hindsight:{bank}",
         },
     )
     return json.dumps(

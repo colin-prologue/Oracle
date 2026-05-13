@@ -164,6 +164,13 @@ def test_hindsight_oracle_query_returns_relevance_gate_envelope(
     request_body = json.loads(mock_daemon["last_request"]()["body"])
     assert request_body["query"] == "Should this use Hindsight recall?"
 
+    log_path = next((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
+    entry = json.loads(log_path.read_text())
+    assert entry["workflow_source"] == "native"
+    assert entry["outcome"] == "relevant"
+    assert entry["retrieved_ids"] == payload["gate"]["retrieved_ids"]
+    assert entry["accepted_ids"] == payload["gate"]["accepted_ids"]
+
 
 def test_oracle_skill_contract_queries_hindsight_before_recommendations():
     skill = (ROOT / ".claude" / "skills" / "oracle" / "SKILL.md").read_text()
