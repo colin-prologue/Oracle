@@ -18,10 +18,8 @@ Key documents:
 
 **When to query organically:** Before recommending an architectural approach, picking between technologies, or evaluating a tradeoff, invoke `/oracle` first — even unprompted. The oracle is allowed to come back empty; that's a valid signal, not a failure.
 
-Standalone `mcp/oracle-query` is a compatibility shim for named Codex consumers
-that still require exact legacy response shape. Do not remove it until the
-migration matrix records passing native query/capture/pre-clear tests, explicit
-user approval, and one dogfood session with no blocking regressions.
+The former standalone `mcp/oracle-query` compatibility server has been retired.
+Use native Hindsight MCP tools for Oracle recall, capture, and query logging.
 
 Daemon runs on `http://localhost:9077` (claude-code profile). Start with:
 ```
@@ -45,7 +43,7 @@ Use `/oracle-debate "[philosophy]"` or `/oracle-observe "[insight]"` mid-session
 - Hindsight oracle bank (postgresql via daemon) + `.decisions/` markdown files (002-oracle-pattern-modeling)
 - Python 3.11+ for existing MCP/scripts; Markdown for skills, specs, and migration docs + Existing `mcp.server.fastmcp.FastMCP`, `httpx`, Python standard library HTTP/JSON/path tooling, Hindsight daemon HTTP API at `localhost:9077` (003-oracle-workflow-layer)
 - Hindsight oracle bank for operational recall/retain; repository-local `.decisions/phi/` and `.decisions/queries/YYYY-MM.jsonl` for durable review/audit mirrors (003-oracle-workflow-layer)
-- Oracle workflow layer over base Hindsight primitives; standalone `mcp/oracle-query` retained only as exact-shape compatibility shim pending deprecation gates (003-oracle-workflow-layer)
+- Oracle workflow layer over base Hindsight primitives; standalone `mcp/oracle-query` retired after deprecation gates passed (003-oracle-workflow-layer)
 
 ## Recent Changes
 - 002-oracle-pattern-modeling: Added Python 3.14 (scripts) — no new runtime + Hindsight daemon (http://localhost:9077), hindsight-embed (uvx), Anthropic API (claude-haiku-3)

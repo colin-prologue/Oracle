@@ -77,7 +77,7 @@
 
 - [X] T020 [US2] Implement empty and irrelevant outcome handling through the canonical relevance-gate helper in `scripts/mcp_server.py`
 - [X] T021 [US2] Update `/oracle` skill empty-result instructions to forbid near-miss summaries in `.claude/skills/oracle/SKILL.md`
-- [X] T022 [US2] Update standalone compatibility notes for exact empty signal behavior in `mcp/oracle-query/README.md`
+- [X] T022 [US2] Update standalone compatibility notes for exact empty signal behavior before deprecation
 
 **Checkpoint**: User Story 2 returns the exact empty signal across native workflow tests.
 
@@ -190,8 +190,8 @@
 ### Implementation for User Story 7
 
 - [X] T054 [US7] Complete active-consumer and exact-shape decisions for every row in `specs/003-oracle-workflow-layer/migration-matrix.md`
-- [X] T055 [US7] Convert or document `mcp/oracle-query/server.py` as a compatibility shim over the native workflow in `mcp/oracle-query/server.py`
-- [X] T056 [US7] Update standalone Oracle MCP migration and rollback notes in `mcp/oracle-query/README.md`
+- [X] T055 [US7] Convert or document `mcp/oracle-query/server.py` as a compatibility shim over the native workflow before deprecation
+- [X] T056 [US7] Update standalone Oracle MCP migration and rollback notes before deprecation
 - [X] T057 [US7] Update repository-wide Oracle architecture and usage documentation in `README.md`
 - [X] T058 [US7] Update agent-facing Oracle instructions and recent technology context in `CLAUDE.md`
 
@@ -207,7 +207,7 @@
 - [X] T060 [P] Run quickstart manual verification and record dogfood outcome in `specs/003-oracle-workflow-layer/quickstart.md`
 - [X] T061 [P] Review recent Oracle query logs for canonical shape compatibility using `scripts/review_oracle_queries.py`
 - [X] T062 Update deprecation gate status and user approval placeholder in `specs/003-oracle-workflow-layer/migration-matrix.md`
-- [X] T063 Remove or disable standalone `mcp/oracle-query` only if all deprecation gates in `specs/003-oracle-workflow-layer/migration-matrix.md` pass and user approval is recorded
+- [X] T063 Remove standalone `mcp/oracle-query` after all deprecation gates in `specs/003-oracle-workflow-layer/migration-matrix.md` passed and user approval was recorded
 
 ---
 
@@ -277,4 +277,4 @@ Task: "Add compatibility source marker audit test in tests/test_oracle_workflow_
 
 ### Deprecation Safety
 
-Do not remove or disable `mcp/oracle-query` until `specs/003-oracle-workflow-layer/migration-matrix.md` records passing acceptance tests, explicit user approval, and one manual dogfood session with no blocking regressions.
+Standalone `mcp/oracle-query` was removed after `specs/003-oracle-workflow-layer/migration-matrix.md` recorded passing acceptance tests, explicit user approval, and one manual dogfood session with no blocking regressions.

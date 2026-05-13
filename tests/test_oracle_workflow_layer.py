@@ -466,22 +466,18 @@ def test_migration_matrix_covers_required_initial_inventory_targets():
         assert target in matrix
 
 
-def test_exact_response_shape_is_limited_to_named_active_consumers():
+def test_exact_response_shape_consumers_are_retired_after_codex_migration():
     matrix = (
         ROOT / "specs" / "003-oracle-workflow-layer" / "migration-matrix.md"
     ).read_text()
-    compat_server = (ROOT / "mcp" / "oracle-query" / "server.py").read_text()
 
-    assert (
-        "| `mcp/oracle-query/server.py` | mcp |" in matrix
-        and "| true |" in matrix
-        and "Codex Oracle connector" in matrix
-    )
-    assert "EXACT_SHAPE_COMPATIBILITY = True" in compat_server
-    assert "compat-shim" in compat_server
+    assert not (ROOT / "mcp" / "oracle-query" / "server.py").exists()
+    assert not (ROOT / "mcp" / "oracle-query" / "README.md").exists()
+    assert "mcp/oracle-query/server.py" not in matrix
+    assert "Codex Oracle connector" not in matrix
 
 
-def test_standalone_oracle_query_removal_gate_remains_blocked():
+def test_standalone_oracle_query_removal_gate_is_satisfied():
     matrix = (
         ROOT / "specs" / "003-oracle-workflow-layer" / "migration-matrix.md"
     ).read_text()
@@ -491,4 +487,6 @@ def test_standalone_oracle_query_removal_gate_remains_blocked():
     assert "Pre-clear candidate tests:" in matrix
     assert "Explicit user approval for removal:" in matrix
     assert "Manual dogfood session with no blocking regressions:" in matrix
-    assert "pending" in matrix
+    assert "Explicit user approval for removal: pass" in matrix
+    assert "Removal action: performed" in matrix
+    assert "pending" not in matrix

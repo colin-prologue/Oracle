@@ -56,10 +56,9 @@ Session ends
 
 Retention is deliberate. `autoRetain` is disabled — the bank fills with noise faster than reflection can surface patterns when every exchange is retained automatically. Every entry in the oracle earned its place.
 
-During the workflow-layer migration, the standalone `mcp/oracle-query` server
-remains only as a compatibility shim for named active consumers that require
-its exact legacy response shape. Native Oracle behavior should be implemented
-through base Hindsight recall, retain, and query logging helpers.
+The former standalone `mcp/oracle-query` compatibility server has been retired.
+Native Oracle behavior is implemented through base Hindsight recall, retain,
+and query logging helpers.
 
 ---
 

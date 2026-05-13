@@ -1,6 +1,8 @@
 # Contract: Migration Matrix
 
-The migration matrix is the required inventory before standalone `oracle-query` removal. It may be implemented as Markdown, CSV, JSON, or YAML during `/speckit.tasks`, but it must preserve the fields and rules below.
+The migration matrix was the required inventory before standalone
+`oracle-query` removal. It may be implemented as Markdown, CSV, JSON, or YAML
+during `/speckit.tasks`, but it must preserve the fields and rules below.
 
 ## Required Fields
 
@@ -18,7 +20,7 @@ The migration matrix is the required inventory before standalone `oracle-query` 
 | `migration_notes` | yes | User-visible docs or command guidance. |
 | `rollback_notes` | yes | How to restore prior behavior if migration fails. |
 
-## Required Initial Inventory Targets
+## Required Initial Inventory Targets Before Deprecation
 
 - `.claude/skills/oracle/SKILL.md`
 - `.claude/skills/oracle-debate/SKILL.md`
@@ -45,7 +47,7 @@ The migration matrix is the required inventory before standalone `oracle-query` 
 
 ## Removal Gate
 
-Standalone `mcp/oracle-query` removal is blocked until:
+Standalone `mcp/oracle-query` removal was blocked until:
 
 - native query acceptance tests pass;
 - native capture acceptance tests pass;
