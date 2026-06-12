@@ -1,6 +1,6 @@
 <!-- ORACLE ARTIFACT — canonical copy in the oracle bank; this file is a browse mirror in the Hindsight repo. Observed evidence, not a held philosophy. -->
 
-**Status:** active
+**Status:** graduated → PHI-032
 
 ## OBS-004 — External artifact ingestion is the first real scoping pass
 

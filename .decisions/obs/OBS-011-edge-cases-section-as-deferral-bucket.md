@@ -1,6 +1,6 @@
 <!-- ORACLE ARTIFACT — canonical copy in the oracle bank; this file is a browse mirror in the Hindsight repo. Observed evidence, not a held philosophy. -->
 
-**Status:** active
+**Status:** graduated → PHI-031
 
 ## OBS-011 — Edge Cases Section as Deferral Bucket
 
