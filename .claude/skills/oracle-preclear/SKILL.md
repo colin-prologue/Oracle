@@ -132,6 +132,10 @@ Do NOT proceed to the file write below until the MCP retain call returns success
 
 **Then write the derivative file** to `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/PHI-{NNN}-{slug}.md` — **never** to the current project's directory. The file is a convenience copy for browsing; the bank is source of truth.
 
+Target PHI body ≤ ~2KB. A PHI is a normative claim with its commitment
+structure (tensions, revision triggers) — not an incident report. If the
+draft exceeds ~2KB, move narrative into an OBS and cite it under Evidence.
+
 The first line is a banner that self-identifies the file as an oracle artifact, so if the path is ever read from an unexpected location it cannot be mistaken for a local project rule:
 
 ```markdown
@@ -148,7 +152,15 @@ The first line is a banner that self-identifies the file as an oracle artifact, 
 {Held opinion in 1–2 sentences. Phrased as a disposition, not a rule.}
 
 ### Why I Hold This
-{The experience or repeated pattern that grounded this position.}
+{The experience or repeated pattern that grounded this position — 2-4
+sentences. Detailed case studies do NOT go here: capture them as OBS records
+and cite them in Evidence below.}
+
+### Evidence
+{Bulleted OBS-NNN citations, one line each: `- OBS-NNN — {one-line summary}
+(supports)`. If no OBS exists yet for the grounding incident, create one in
+the same session and cite it. Tension evidence is listed here too, marked
+`(tension)`.}
 
 ### Where It Applies
 {Cross-project context — when does this philosophy kick in.}
