@@ -78,6 +78,16 @@ Wait for the user's decision.
 
 ### Step 5 — Curate the observation text
 
+Apply the **OBS admission test** first: *"Did this actually happen — is it
+dated, countable, and citable?"* If the observation cites no dated instance,
+ask the user for one before proceeding (project + date + what occurred).
+
+Apply the **prescription check**: if the text contains prescriptive language
+("should", "must", "prefer", "always/never"), tell the user the prescription
+belongs in a PHI and offer to route it to `/oracle-debate` after retaining
+the descriptive remainder as the OBS. Do not retain prescriptions inside OBS
+bodies.
+
 Present the user's original observation and ask if they want to refine it before retention:
 
 > **Observation text to retain:**
@@ -120,7 +130,8 @@ After explicit user confirmation in step 6, call `mcp__hindsight__hindsight_reta
     "type": "observation",
     "date": "<YYYY-MM-DD today>",
     "relationship": "<new | extends OBS-NNN | contradicts PHI-NNN>",
-    "source": "manual"
+    "source": "manual",
+    "source_project": "<git remote slug or basename of cwd>"
   }
   ```
 
@@ -129,7 +140,12 @@ audit state `retain-failed` and surface the daemon or retain error to the
 user. The metadata above is source metadata and must travel with the retained
 bank entry when retry succeeds.
 
-When retain succeeds, record capture audit state `retained`.
+When retain succeeds, record capture audit state `retained`, then write the
+derivative file to
+`${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/obs/OBS-{NNN}-{slug}.md`
+with the standard OBS banner and `**Status:** active` line (see
+oracle-preclear Step 4 for the exact format) and record `file-written`
+(or `bank-retained/file-write-failed` on failure).
 
 ### Step 8 — Confirm completion
 
