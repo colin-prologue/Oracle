@@ -1,0 +1,5 @@
+<!-- ORACLE ARTIFACT — canonical copy in the oracle bank; this file is a browse mirror in the Hindsight repo. Observed evidence, not a held philosophy. -->
+
+**Status:** active
+
+Decision-record review verdicts double as autonomy instrumentation. When agent judgment calls are recorded (AgDR-style, per PHI-028) and an owner ratifies or overturns each at the merge gate, the verdict history — ratified vs. overturned, per agent, per task type — is exactly the track record an earned-autonomy ratchet needs. One mechanism yields both decision provenance and the evidence for expanding or contracting agent autonomy, with no separate instrumentation built or maintained. A sustained ratified rate on a task type is the data-backed justification to ratchet that task type up (fewer calls need pre-merge attention); overturns ratchet it down or signal the spec needs tightening. Found while integrating the AgDR pattern into the agent-team project (2026-06-11): the open question "where does the trust ratchet's per-agent per-task-type track record live?" dissolved the moment AgDR verdicts existed — the review gate was already producing the dataset.

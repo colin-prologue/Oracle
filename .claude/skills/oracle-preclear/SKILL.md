@@ -71,6 +71,23 @@ For each candidate, classify as:
 - **PHI** — a prescriptive held opinion ("prefer X over Y when Z")
 - **OBS** — a descriptive pattern or observation
 
+**OBS admission test** (apply before presenting an OBS candidate):
+*"Did this actually happen — is it dated, countable, and citable?"* An OBS
+must cite at least one dated instance (project + date + what occurred). If
+the candidate cannot, it is not an OBS — drop it or reframe it.
+
+**Prescription check:** if an OBS candidate contains prescriptive language
+("should", "must", "prefer", "always/never do X"), it has a PHI candidate
+inside it. Split it: present the evidence as the OBS, and present the
+prescription as a separate PHI candidate (or note it as a future
+/oracle-debate if the user declines the PHI now). Do not retain prescriptions
+inside OBS bodies.
+
+**Relationship tagging:** every OBS candidate that relates to an existing
+PHI must name the relationship: `supports PHI-NNN`, `tension-with PHI-NNN`,
+or `standalone`. Tension evidence is as valuable as support — do not
+suppress it.
+
 If nothing qualifies, say so clearly and skip to Step 5. Do not create no filler
 candidates to satisfy the list. Do not retain unapproved candidates.
 
@@ -115,6 +132,10 @@ Do NOT proceed to the file write below until the MCP retain call returns success
 
 **Then write the derivative file** to `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/PHI-{NNN}-{slug}.md` — **never** to the current project's directory. The file is a convenience copy for browsing; the bank is source of truth.
 
+Target PHI body ≤ ~2KB. A PHI is a normative claim with its commitment
+structure (tensions, revision triggers) — not an incident report. If the
+draft exceeds ~2KB, move narrative into an OBS and cite it under Evidence.
+
 The first line is a banner that self-identifies the file as an oracle artifact, so if the path is ever read from an unexpected location it cannot be mistaken for a local project rule:
 
 ```markdown
@@ -131,7 +152,15 @@ The first line is a banner that self-identifies the file as an oracle artifact, 
 {Held opinion in 1–2 sentences. Phrased as a disposition, not a rule.}
 
 ### Why I Hold This
-{The experience or repeated pattern that grounded this position.}
+{The experience or repeated pattern that grounded this position — 2-4
+sentences. Detailed case studies do NOT go here: capture them as OBS records
+and cite them in Evidence below.}
+
+### Evidence
+{Bulleted OBS-NNN citations, one line each: `- OBS-NNN — {one-line summary}
+(supports)`. If no OBS exists yet for the grounding incident, create one in
+the same session and cite it. Tension evidence is listed here too, marked
+`(tension)`.}
 
 ### Where It Applies
 {Cross-project context — when does this philosophy kick in.}
@@ -162,9 +191,33 @@ Call `mcp__hindsight__hindsight_retain_obs`:
   {
     "type": "observation",
     "date": "<YYYY-MM-DD today>",
-    "source": "oracle-preclear"
+    "source": "oracle-preclear",
+    "source_project": "<from step 1>",
+    "relationship": "<supports PHI-NNN | tension-with PHI-NNN | standalone>"
   }
   ```
+
+**Then write the derivative OBS file** to
+`${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/obs/OBS-{NNN}-{slug}.md`
+— same bank-first ordering and failure states as PHI files
+(`bank-retained/file-write-failed`, `file-written`). First line banner
+(mirrors the PHI banner wording):
+
+    <!-- ORACLE ARTIFACT — canonical copy in the oracle bank; this file is a browse mirror in the Hindsight repo. Observed evidence, not a held philosophy. -->
+
+Then a status line, then the retained content:
+
+    **Status:** active
+
+    ## OBS-{NNN} — {title}
+    **Relationship:** {supports PHI-NNN | tension-with PHI-NNN | standalone}
+
+    {retained OBS body verbatim}
+
+The `**Status:**` line is the lifecycle terminal-state record (`active` /
+`graduated → PHI-NNN` / `declined YYYY-MM-DD`). The bank cannot update
+documents in place, so the mirror is canonical for status only; the bank
+stays canonical for content.
 
 Increment the OBS counter before the next OBS candidate.
 

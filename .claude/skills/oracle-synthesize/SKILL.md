@@ -35,6 +35,35 @@ If the call errors with daemon-unavailable, surface the start command and stop.
 
 Call `mcp__hindsight__hindsight_list_documents(bank="oracle", prefix="OBS-")`. Highest `id` numeric suffix + 1, zero-padded. Start at `OBS-001` if none.
 
+### Step 2b — Graduation triage (OBS→PHI candidates)
+
+Before synthesizing new observations, check whether existing evidence has
+earned commitment status. This is a judgment step, not a counting step.
+
+1. Run `python3 scripts/review_oracle_queries.py` (or read
+   `.decisions/queries/*.jsonl` directly) and note which OBS IDs recur in
+   `retrieved_ids` (requests signal) and which appear *in the answer text*
+   of logged queries (usage signal — stricter than `accepted_ids`, which
+   tracks retrieval wholesale).
+2. Read the `**Status:**` lines in `.decisions/obs/*.md`. Skip any OBS not
+   `active` (already `graduated` or `declined`).
+3. For each active OBS showing requests or usage signal, check
+   **confirmation**: a second dated instance from a different
+   `source_project` (metadata or body), or prior user interest.
+
+For each candidate, present:
+
+> **Graduation candidate: OBS-NNN** — requests: {seen in N queries},
+> usage: {cited in N answers}, confirmation: {yes — projects A, B / not yet}
+> Distilled prescription: "{the normative claim hiding in this evidence}"
+> Promote with: `/oracle-debate "{distilled prescription}"`
+
+Promotion is the user's call — never mint a PHI here. Record the outcome in
+the OBS mirror's `**Status:**` line: `graduated → PHI-NNN` after a
+successful debate, or `declined YYYY-MM-DD` if the user passes (declined OBS
+are not re-proposed; the user can flip the line back to `active` to
+reconsider). If no candidates, say "No graduation candidates" and continue.
+
 ### Step 3 — Recall + synthesis subagent
 
 Synthesis runs as MCP recall + Sonnet subagent dispatch (subscription tokens). See `.claude/.decisions/CDR-subscription-llm-routing.md`.
@@ -92,6 +121,9 @@ Write a markdown OBS body that:
 - names tensions, counter-evidence, or limits in the corpus before
   stating the synthesized pattern when the sample points in more than
   one direction;
+- if any retained OBS carries `relationship: tension-with PHI-NNN`, check
+  that PHI's "Open to Revision When" clause and state whether the
+  accumulated tension evidence meets it;
 - distinguishes cited Oracle memory from current-session inference;
 - if a relevant memory lacks a PHI/OBS identifier, mark the citation gap
   explicitly rather than inventing an ID;
@@ -111,6 +143,12 @@ Show the subagent's synthesized output verbatim and ask:
 > {subagent output}
 >
 > Edit as needed. The curated version will be retained as {OBS-NNN}.
+
+Admission check for synthesized OBS: the body must cite ≥2 corpus instances
+by ID (its dated instances are those citations — admissible form 2 in
+CDR-obs-phi-graduation). It must remain descriptive: if the synthesis
+produced prescriptive language, that prescription is a graduation candidate
+for Step 2b / /oracle-debate, not OBS content.
 
 Wait for the user's response. Accept edits. Do not proceed until the user confirms the curated text.
 
@@ -150,7 +188,9 @@ After explicit user confirmation in step 6, call `mcp__hindsight__hindsight_reta
   {
     "type": "observation",
     "date": "<YYYY-MM-DD today>",
-    "query": "<the synthesis query>"
+    "query": "<the synthesis query>",
+    "source": "oracle-synthesize",
+    "source_project": "<git remote slug or basename of cwd>"
   }
   ```
 
