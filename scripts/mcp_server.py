@@ -65,6 +65,14 @@ def _post(path: str, payload: dict, timeout: int = 30) -> dict:
         return json.loads(resp.read())
 
 
+def _delete(path: str) -> dict:
+    """Issue DELETE to daemon; return parsed JSON body, or {} on a no-body 204."""
+    req = urllib.request.Request(f"{DAEMON_URL}{path}", method="DELETE")
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = resp.read()
+    return json.loads(data) if data else {}
+
+
 @mcp.tool()
 def hindsight_stats(bank: str) -> dict:
     """Return daemon stats for the given bank (e.g., node_count, observation_count)."""
@@ -247,6 +255,21 @@ def hindsight_retain_session_log(
         derived_from=None,
         metadata=metadata,
     )
+
+
+@mcp.tool()
+def hindsight_delete_document(bank: str, document_id: str) -> dict:
+    """Delete a document from the bank by id.
+
+    Destructive and irreversible at the bank layer. Removes ONLY the bank
+    record — the filesystem mirror under .decisions/{phi,obs}/ is the caller's
+    responsibility, symmetric with the retain tools (also bank-only). Use for
+    pruning smoke-test artifacts or vacating a mis-numbered id during a
+    renumber. Returns the daemon response, or {document_id, deleted: True} when
+    the daemon answers with no body.
+    """
+    result = _delete(f"/v1/default/banks/{bank}/documents/{document_id}")
+    return result or {"document_id": document_id, "deleted": True}
 
 
 def _hindsight_root() -> Path:

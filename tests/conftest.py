@@ -92,6 +92,9 @@ def mock_daemon():
                 req.full_url, expected["status"], "mock daemon error", {}, io.BytesIO(b"")
             )
 
+        # payload=None models a 204/no-body response (e.g. DELETE)
+        if expected["payload"] is None:
+            return MockResponse(b"")
         body = json.dumps(expected["payload"]).encode()
         return MockResponse(body)
 

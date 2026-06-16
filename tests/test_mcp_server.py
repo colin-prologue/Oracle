@@ -359,6 +359,43 @@ def test_hindsight_retain_surfaces_http_error(mcp_mod, mock_daemon):
 
 
 # ---------------------------------------------------------------------------
+# hindsight_delete_document — destructive, bank-only, by id
+# ---------------------------------------------------------------------------
+
+
+def test_delete_document_issues_delete_to_id_route(mcp_mod, mock_daemon):
+    mock_daemon["respond"](
+        {"document_id": "OBS-099", "deleted": True},
+        url="/v1/default/banks/oracle/documents/OBS-099", method="DELETE",
+    )
+    result = mcp_mod.hindsight_delete_document(bank="oracle", document_id="OBS-099")
+
+    req = mock_daemon["last_request"]()
+    assert req["method"] == "DELETE"
+    assert req["url"].endswith("/v1/default/banks/oracle/documents/OBS-099")
+    assert result["deleted"] is True
+
+
+def test_delete_document_handles_empty_204_body(mcp_mod, mock_daemon):
+    """Daemon may answer a delete with 204/no body — tool returns a useful dict."""
+    mock_daemon["respond"](
+        None,  # empty body
+        url="/v1/default/banks/oracle/documents/OBS-099", method="DELETE",
+    )
+    result = mcp_mod.hindsight_delete_document(bank="oracle", document_id="OBS-099")
+    assert result == {"document_id": "OBS-099", "deleted": True}
+
+
+def test_delete_document_surfaces_http_error(mcp_mod, mock_daemon):
+    mock_daemon["respond"](
+        {}, url="/v1/default/banks/oracle/documents/NOPE-001",
+        method="DELETE", status=404,
+    )
+    with pytest.raises(urllib.error.HTTPError):
+        mcp_mod.hindsight_delete_document(bank="oracle", document_id="NOPE-001")
+
+
+# ---------------------------------------------------------------------------
 # collision guard — retain must not silently overwrite an existing document_id
 # (the daemon upserts by id; without this guard a duplicate id is data loss)
 # ---------------------------------------------------------------------------
