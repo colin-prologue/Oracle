@@ -126,6 +126,8 @@ Once confirmed in step 3, call the `mcp__hindsight__hindsight_retain_phi` tool:
   }
   ```
 
+**Collision handling.** `PHI-{NNN}` was computed back in step 1; another capture may have claimed it during the debate. Immediately before retaining, re-run `hindsight_list_documents(bank="oracle", prefix="PHI-")` and recompute the next free ID. The retain tool now refuses an existing ID rather than silently overwriting — if it returns `document_id ... already exists`, a concurrent session took it: bump to the next free ID, update the filename slug to match, and retry. Pass `allow_overwrite=True` *only* to deliberately correct an existing record in place, never to resolve a collision.
+
 If the tool errors with a daemon connection failure:
 - Surface: **Oracle unavailable** — see daemon start instructions in `/oracle` skill
 - Record capture audit state `retain-failed`

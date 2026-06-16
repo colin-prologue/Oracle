@@ -130,6 +130,8 @@ Derive a filename slug from the title (lowercase, spaces to hyphens, strip punct
 
 Do NOT proceed to the file write below until the MCP retain call returns successfully. If retain fails, do not create the canonical markdown file. Record capture audit state `retain-failed` and leave the candidate unretained for retry. This preserves the bank-first invariant: a mid-run auto-compact between bank-retain and file-write only orphans the regenerable file copy, never the canonical record.
 
+**Collision handling (applies to every PHI and OBS retained in this run).** A preclear batches multiple retains, so IDs computed early can go stale mid-run. Recompute the next free ID immediately before each retain via `hindsight_list_documents`. The retain tools now refuse an existing ID rather than silently overwriting — if one returns `document_id ... already exists`, a concurrent session (or an earlier candidate in this same run) took it: bump to the next free ID, update the filename slug to match, and retry. Pass `allow_overwrite=True` *only* to deliberately correct an existing record in place, never to resolve a collision.
+
 **Then write the derivative file** to `${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}/.decisions/phi/PHI-{NNN}-{slug}.md` — **never** to the current project's directory. The file is a convenience copy for browsing; the bank is source of truth.
 
 Target PHI body ≤ ~2KB. A PHI is a normative claim with its commitment

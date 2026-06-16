@@ -194,6 +194,8 @@ After explicit user confirmation in step 6, call `mcp__hindsight__hindsight_reta
   }
   ```
 
+**Collision handling.** `OBS-{NNN}` was computed back in step 2; another capture may have claimed it since. Immediately before retaining, re-run `hindsight_list_documents(bank="oracle", prefix="OBS-")` and recompute the next free ID. The retain tool now refuses an existing ID rather than silently overwriting — if it returns `document_id ... already exists`, a concurrent session took it: bump to the next free ID, update the filename slug to match, and retry. Pass `allow_overwrite=True` *only* to deliberately correct an existing record in place, never to resolve a collision.
+
 ### Step 8 — Confirm completion
 
 Report:

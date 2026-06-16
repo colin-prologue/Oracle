@@ -329,7 +329,10 @@ def test_oracle_observe_requires_explicit_approval_and_retain_first_contract():
     skill = (ROOT / ".claude" / "skills" / "oracle-observe" / "SKILL.md").read_text()
 
     assert "Wait for explicit confirmation. Never auto-retain." in skill
-    assert "If retain fails, do not create the canonical markdown file" in skill
+    # retain-bank-first invariant: a failed retain must not produce a file.
+    # (wording-robust — the surrounding prose now distinguishes the recoverable
+    # collision path from other failures, but the invariant is unchanged.)
+    assert "do not create the canonical markdown file" in skill
     assert "source metadata" in skill
     assert "${HINDSIGHT_ROOT:-$HOME/Developer/Hindsight}" in skill
 
