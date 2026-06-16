@@ -122,7 +122,8 @@ def _project_slim(results: list[dict]) -> list[dict]:
 
 
 def _retain(bank: str, *, context: str, content: str, document_id: str | None,
-            derived_from: str | None, metadata: dict | None) -> dict:
+            derived_from: str | None, metadata: dict | None,
+            allow_overwrite: bool = False) -> dict:
     """Build the retain payload and POST to daemon.
 
     `context` is daemon-required: 'philosophy' | 'observation' | 'session-log'.
@@ -131,12 +132,30 @@ def _retain(bank: str, *, context: str, content: str, document_id: str | None,
     Contract: `derived_from` is a typed kwarg only. Passing `derived_from`
     inside `metadata` is rejected — it would create silent precedence ambiguity
     if both were set. Callers must use the kwarg.
+
+    Collision guard: the daemon upserts by document_id, so a duplicate id
+    silently overwrites the existing record (data loss). When document_id is
+    set and allow_overwrite is False, check the bank first and refuse if the id
+    already exists. This narrows — but does not close — the race between two
+    concurrent retainers (the check and the POST are not atomic); a truly
+    simultaneous second writer can still pass the check. The filesystem-side
+    O_EXCL guard in the capture skills covers that residual window.
+    `allow_overwrite=True` is the explicit, intentional update path (e.g.
+    correcting a record in place) and skips the check.
     """
     md = dict(metadata or {})
     if "derived_from" in md:
         raise ValueError(
             "derived_from must be passed as a kwarg, not inside metadata"
         )
+    if document_id is not None and not allow_overwrite:
+        body = _get(f"/v1/default/banks/{bank}/documents")
+        if any(d.get("id") == document_id for d in body.get("items", [])):
+            raise ValueError(
+                f"document_id {document_id!r} already exists in bank {bank!r}; "
+                f"choose the next free id, or pass allow_overwrite=True to "
+                f"replace it intentionally"
+            )
     if derived_from:
         md["derived_from"] = derived_from
     item: dict = {"content": content, "context": context, "metadata": md}
@@ -153,12 +172,17 @@ def hindsight_retain_phi(
     content: str,
     derived_from: str | None = None,
     metadata: dict | None = None,
+    allow_overwrite: bool = False,
 ) -> dict:
     """Retain a Philosophy (PHI) record to the bank.
 
     The MCP server hard-codes context='philosophy' — the caller cannot pass
     a mismatched type. document_id (e.g., "PHI-020") is required. Returns
     the daemon response.
+
+    By default the retain refuses if document_id already exists, since the
+    daemon upserts by id and would silently overwrite. Pass
+    allow_overwrite=True to update an existing record on purpose.
 
     Note: caller is responsible for stripping the `<!-- ORACLE ARTIFACT -->`
     banner from `content` before passing — the banner is a filesystem-only
@@ -171,6 +195,7 @@ def hindsight_retain_phi(
         document_id=document_id,
         derived_from=derived_from,
         metadata=metadata,
+        allow_overwrite=allow_overwrite,
     )
 
 
@@ -181,11 +206,16 @@ def hindsight_retain_obs(
     content: str,
     derived_from: str | None = None,
     metadata: dict | None = None,
+    allow_overwrite: bool = False,
 ) -> dict:
     """Retain an Observation (OBS) record to the bank.
 
     Hard-codes context='observation'. document_id required (e.g., "OBS-013").
     Use `derived_from` to cite related PHI/OBS IDs.
+
+    By default the retain refuses if document_id already exists (the daemon
+    upserts by id and would silently overwrite). Pass allow_overwrite=True to
+    update an existing record on purpose.
     """
     return _retain(
         bank,
@@ -194,6 +224,7 @@ def hindsight_retain_obs(
         document_id=document_id,
         derived_from=derived_from,
         metadata=metadata,
+        allow_overwrite=allow_overwrite,
     )
 
 

@@ -39,16 +39,18 @@ def mock_daemon():
     """Mock urllib.request.urlopen calls to the hindsight daemon.
 
     Yields a dict with two callables:
-      - respond(payload, *, url, method, status=200) — register the next response.
-        url and method are REQUIRED; the mock asserts the actual request matches.
-        status >= 400 raises HTTPError.
+      - respond(payload, *, url, method, status=200) — enqueue the next response.
+        Call once per expected daemon round-trip, in order; responses are served
+        FIFO. url and method are REQUIRED; the mock asserts the actual request
+        matches. status >= 400 raises HTTPError.
       - last_request() — capture of the most recent call (url, method, body).
 
     Mandatory route-pinning prevents tools from silently being routed to the
-    wrong endpoint while still passing tests.
+    wrong endpoint while still passing tests. The FIFO queue lets one tool make
+    multiple daemon calls (e.g. a collision-check GET before a retain POST).
     """
     captured = {"url": None, "method": None, "headers": {}, "body": None}
-    next_response = {"payload": None, "url": None, "method": None, "status": 200}
+    queue: list[dict] = []
 
     class MockResponse:
         def __init__(self, body_bytes: bytes):
@@ -69,39 +71,32 @@ def mock_daemon():
         captured["headers"] = dict(req.headers)
         captured["body"] = req.data.decode() if req.data else None
 
-        expect_url = next_response["url"]
-        if expect_url is None:
+        if not queue:
             raise AssertionError(
-                "mock_daemon.respond() called without url= — route-pinning is mandatory"
+                f"unexpected daemon call with no response enqueued: "
+                f"{req.get_method()} {req.full_url}"
             )
-        if not req.full_url.endswith(expect_url):
+        expected = queue.pop(0)
+
+        if not req.full_url.endswith(expected["url"]):
             raise AssertionError(
-                f"unexpected URL: got {req.full_url!r}, expected suffix {expect_url!r}"
+                f"unexpected URL: got {req.full_url!r}, expected suffix {expected['url']!r}"
             )
-        expect_method = next_response["method"]
-        if expect_method is None:
+        if req.get_method() != expected["method"]:
             raise AssertionError(
-                "mock_daemon.respond() called without method= — method-pinning is mandatory"
-            )
-        if req.get_method() != expect_method:
-            raise AssertionError(
-                f"unexpected method: got {req.get_method()!r}, expected {expect_method!r}"
+                f"unexpected method: got {req.get_method()!r}, expected {expected['method']!r}"
             )
 
-        status = next_response["status"]
-        if status >= 400:
+        if expected["status"] >= 400:
             raise urllib.error.HTTPError(
-                req.full_url, status, "mock daemon error", {}, io.BytesIO(b"")
+                req.full_url, expected["status"], "mock daemon error", {}, io.BytesIO(b"")
             )
 
-        body = json.dumps(next_response["payload"]).encode()
+        body = json.dumps(expected["payload"]).encode()
         return MockResponse(body)
 
     def respond(payload, *, url, method, status=200):
-        next_response["payload"] = payload
-        next_response["url"] = url
-        next_response["method"] = method
-        next_response["status"] = status
+        queue.append({"payload": payload, "url": url, "method": method, "status": status})
 
     def last_request():
         return dict(captured)

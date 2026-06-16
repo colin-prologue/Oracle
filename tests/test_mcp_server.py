@@ -236,6 +236,7 @@ RETAIN_URL = "/v1/default/banks/oracle/memories"
 
 
 def test_hindsight_retain_phi_maps_context_and_metadata(mcp_mod, mock_daemon):
+    mock_daemon["respond"]({"items": []}, url=DOCS_URL, method="GET")
     mock_daemon["respond"](
         {"document_id": "PHI-020", "mentioned_at": "2026-04-30T03:30:00+00:00"},
         url=RETAIN_URL, method="POST",
@@ -259,6 +260,7 @@ def test_hindsight_retain_phi_maps_context_and_metadata(mcp_mod, mock_daemon):
 
 
 def test_hindsight_retain_phi_omits_derived_from_when_absent(mcp_mod, mock_daemon):
+    mock_daemon["respond"]({"items": []}, url=DOCS_URL, method="GET")
     mock_daemon["respond"](
         {"document_id": "PHI-021"}, url=RETAIN_URL, method="POST",
     )
@@ -307,6 +309,7 @@ def test_retain_rejects_derived_from_in_metadata_even_without_kwarg(mcp_mod, moc
 
 
 def test_hindsight_retain_obs_maps_context_observation(mcp_mod, mock_daemon):
+    mock_daemon["respond"]({"items": []}, url=DOCS_URL, method="GET")
     mock_daemon["respond"](
         {"document_id": "OBS-013"}, url=RETAIN_URL, method="POST",
     )
@@ -344,12 +347,81 @@ def test_hindsight_retain_session_log_no_document_id(mcp_mod, mock_daemon):
 
 def test_hindsight_retain_surfaces_http_error(mcp_mod, mock_daemon):
     mock_daemon["respond"](
+        {"items": []}, url=DOCS_URL, method="GET",  # collision-check finds nothing
+    )
+    mock_daemon["respond"](
         {}, url=RETAIN_URL, method="POST", status=400,
     )
     with pytest.raises(urllib.error.HTTPError):
         mcp_mod.hindsight_retain_phi(
             bank="oracle", document_id="PHI-099", content="x"
         )
+
+
+# ---------------------------------------------------------------------------
+# collision guard — retain must not silently overwrite an existing document_id
+# (the daemon upserts by id; without this guard a duplicate id is data loss)
+# ---------------------------------------------------------------------------
+
+
+DOCS_URL = "/v1/default/banks/oracle/documents"
+
+
+def test_retain_phi_rejects_existing_document_id(mcp_mod, mock_daemon):
+    """A PHI whose id already exists is refused — no overwrite POST is sent."""
+    mock_daemon["respond"](
+        {"items": [{"id": "PHI-033"}, {"id": "PHI-034"}]},
+        url=DOCS_URL, method="GET",
+    )
+    with pytest.raises(ValueError, match="already exists"):
+        mcp_mod.hindsight_retain_phi(
+            bank="oracle", document_id="PHI-033", content="body",
+        )
+    # the guard's GET is the last call — no POST escaped
+    assert mock_daemon["last_request"]()["method"] == "GET"
+
+
+def test_retain_obs_rejects_existing_document_id(mcp_mod, mock_daemon):
+    mock_daemon["respond"](
+        {"items": [{"id": "OBS-018"}]}, url=DOCS_URL, method="GET",
+    )
+    with pytest.raises(ValueError, match="already exists"):
+        mcp_mod.hindsight_retain_obs(
+            bank="oracle", document_id="OBS-018", content="body",
+        )
+    assert mock_daemon["last_request"]()["method"] == "GET"
+
+
+def test_retain_phi_proceeds_when_id_is_new(mcp_mod, mock_daemon):
+    """A genuinely new id passes the guard and is retained."""
+    mock_daemon["respond"](
+        {"items": [{"id": "PHI-034"}]}, url=DOCS_URL, method="GET",
+    )
+    mock_daemon["respond"](
+        {"document_id": "PHI-035"}, url=RETAIN_URL, method="POST",
+    )
+    result = mcp_mod.hindsight_retain_phi(
+        bank="oracle", document_id="PHI-035", content="body",
+    )
+    assert result["document_id"] == "PHI-035"
+    assert mock_daemon["last_request"]()["method"] == "POST"
+
+
+def test_retain_phi_allow_overwrite_skips_guard_and_updates(mcp_mod, mock_daemon):
+    """allow_overwrite=True is the explicit, intentional update path.
+
+    No collision-check GET is made — the caller has asserted intent to replace.
+    """
+    mock_daemon["respond"](
+        {"document_id": "PHI-033"}, url=RETAIN_URL, method="POST",
+    )
+    result = mcp_mod.hindsight_retain_phi(
+        bank="oracle", document_id="PHI-033", content="corrected body",
+        allow_overwrite=True,
+    )
+    assert result["document_id"] == "PHI-033"
+    # only one call happened, and it was the POST (no guard GET)
+    assert mock_daemon["last_request"]()["method"] == "POST"
 
 
 # ---------------------------------------------------------------------------
