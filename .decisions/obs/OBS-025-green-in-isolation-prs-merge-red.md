@@ -1,0 +1,8 @@
+<!-- ORACLE ARTIFACT — canonical copy in the oracle bank; this file is a browse mirror in the Hindsight repo. Observed evidence, not a held philosophy. -->
+
+**Status:** active
+
+## OBS-025 — Green-in-isolation PRs merge red; prose sequencing binds no one
+**Relationship:** supports PHI-030
+
+On 2026-07-03 in Switchboard, two PRs (#23 adversarial-audit fixes, #24 test-coverage additions from a parallel spawned session) were each green in isolation and merged into a red main: #24's new tests asserted on attributes (Orchestrator.completed, .totals) that #23 deleted as write-only orphans — a semantic conflict invisible to git's textual merge. The sequencing constraint existed only in prose ("branch off main after the PR merges" inside the spawned task's prompt; "merge #23 before the follow-up sessions open theirs" in a session summary) — neither surface binds the actor who controls start/merge timing, and both sessions started immediately. Detection was discretionary (a post-merge suite run happened to be made); the fix was PR #26 (re-point assertions at observable outcomes) plus a CI gate (PR #27) that tests PR merge commits with strict require-up-to-date branch protection. The gate proved itself within the hour: PR #25 merged underneath #27, and protection blocked #27 as BEHIND, forcing the update + re-run (combined suite: 156 passed) that had been missing that morning. Parallel PR merging had been operating as an autonomous task type with no independent verification at the merge altitude; the highest-risk pairing was a deletion PR racing an addition PR, because orphan-deletion verified at HEAD cannot see consumers being written concurrently in another worktree.
