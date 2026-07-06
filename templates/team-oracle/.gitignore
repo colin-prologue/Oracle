@@ -1,0 +1,6 @@
+# Miner drafts come from raw session transcripts — private until triaged.
+inbox/*
+!inbox/.gitkeep
+
+# Hook sync throttle marker
+.oracle-sync-stamp
