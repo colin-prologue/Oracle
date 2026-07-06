@@ -154,6 +154,9 @@ At session end, retain a 3–5 sentence summary covering what was decided, what 
     PHI-002-persistence-layers-outlive-consumers.md
     PHI-003-prefer-conscious-capture-over-automatic-retention.md
     ...
+  obs/
+    OBS-001-architecture-decision-patterns-constraint-aware-design.md
+    ...
   DECISION_ORACLE.md          ← architecture & implementation guide
   DECISION_CONSTITUTION.md    ← bank mission/directives in human-readable form
 
@@ -164,7 +167,7 @@ At session end, retain a 3–5 sentence summary covering what was decided, what 
   oracle-synthesize/          ← /oracle-synthesize periodic synthesis skill
 ```
 
-PHI files are committed to this repo — git history is the auditable record. Hindsight is not the source of truth; it is the query interface.
+PHI/OBS files are committed to this repo as browsable, regenerable mirrors — git history keeps them auditable. The oracle bank is canonical for content: captures retain to the bank first, then write the mirror (PHI-009). The one exception is OBS lifecycle status, where the mirror's `**Status:**` line is canonical because the bank is append-only (see `.claude/.decisions/CDR-obs-phi-graduation.md`).
 
 Query attempts are reviewed from `.decisions/queries/YYYY-MM.jsonl`. Native and
 compatibility paths write the same canonical audit shape with outcome, source,

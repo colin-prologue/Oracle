@@ -354,6 +354,9 @@ pattern modeling. Graphiti's relational graph queries are not needed at this sta
 **Plugin over MCP** — Hindsight integrates as a Claude Code plugin using native hook events,
 not as an MCP server. Auto-recall and auto-retain are handled by the plugin.
 
-**Files as canonical record, Hindsight as retrieval** — PHI files are committed to the repo.
-Hindsight is not the source of truth, it is the query interface. Avoids lock-in, keeps
-decisions auditable in git history.
+**Bank-first dual-write; mirrors are derivatives** — PHI/OBS captures retain to the oracle
+bank first (canonical for content), then write the `.decisions/` file as a regenerable browse
+mirror (PHI-009: an interruption can then only orphan the recoverable copy, never the
+canonical record). One carve-out: the bank is append-only, so the OBS mirror's `**Status:**`
+line is canonical for lifecycle status (CDR-obs-phi-graduation.md). Mirrors stay committed
+to git so decisions remain auditable and portable without querying the bank.
