@@ -630,6 +630,68 @@ def test_hindsight_log_query_legacy_path_rejects_bad_available_ids(
     assert not list((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
 
 
+def test_hindsight_log_query_rejects_malformed_rejection_reason_keys(
+    mcp_mod, tmp_path, monkeypatch
+):
+    """rejection_reasons keys are ids too — same pollution vector as the lists."""
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+
+    with pytest.raises(ValueError, match="rejection_reasons"):
+        mcp_mod.hindsight_log_query(
+            client="claude-code",
+            question="q",
+            answer="a",
+            recall_data=_canonical_recall_data(
+                rejected_ids=["PHI-024"],
+                accepted_ids=[],
+                outcome="irrelevant",
+                rejection_reasons={"PHI-024 (twice)": "annotated key"},
+            ),
+        )
+
+    assert not list((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
+
+
+def test_hindsight_log_query_rejects_rejection_reason_for_unrejected_id(
+    mcp_mod, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+
+    with pytest.raises(ValueError, match="rejected_ids"):
+        mcp_mod.hindsight_log_query(
+            client="claude-code",
+            question="q",
+            answer="a",
+            recall_data=_canonical_recall_data(
+                rejection_reasons={"OBS-011": "well-formed but never rejected"},
+            ),
+        )
+
+    assert not list((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
+
+
+def test_hindsight_log_query_accepts_reason_keyed_by_rejected_id(
+    mcp_mod, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+
+    mcp_mod.hindsight_log_query(
+        client="claude-code",
+        question="q",
+        answer="a",
+        recall_data=_canonical_recall_data(
+            retrieved_ids=["PHI-024", "OBS-011"],
+            rejected_ids=["OBS-011"],
+            rejection_reasons={"OBS-011": "topic-adjacent only"},
+            result_count=2,
+        ),
+    )
+
+    log_files = list((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
+    parsed = json.loads(log_files[0].read_text().strip().splitlines()[-1])
+    assert parsed["rejection_reasons"] == {"OBS-011": "topic-adjacent only"}
+
+
 def test_validate_oracle_query_audit_entry_rejects_malformed_ids(mcp_mod):
     entry = mcp_mod.build_oracle_query_audit_entry(
         client="claude-code",

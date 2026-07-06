@@ -435,6 +435,16 @@ def validate_oracle_query_audit_entry(entry: dict) -> bool:
                     f"{field} contains malformed id {doc_id!r}: ids must be "
                     "PHI-NNN/OBS-NNN or UUID document ids from recall results"
                 )
+    for doc_id in entry["rejection_reasons"]:
+        if not isinstance(doc_id, str) or not _is_structural_id(doc_id):
+            raise ValueError(
+                f"rejection_reasons contains malformed id key {doc_id!r}: ids "
+                "must be PHI-NNN/OBS-NNN or UUID document ids from recall results"
+            )
+        if doc_id not in entry["rejected_ids"]:
+            raise ValueError(
+                f"rejection_reasons key {doc_id!r} does not appear in rejected_ids"
+            )
     if entry["outcome"] == "failure" and "error" not in entry:
         raise ValueError("failure audit entries must include error")
     if "candidate_bodies" in entry:
