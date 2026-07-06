@@ -56,7 +56,7 @@ def test_hindsight_stats_surfaces_http_error(mcp_mod, mock_daemon):
 def test_hindsight_list_documents_returns_real_daemon_shape(mcp_mod, mock_daemon):
     fixture = load_fixture("documents")
     mock_daemon["respond"](
-        fixture, url="/v1/default/banks/oracle/documents", method="GET",
+        fixture, url="/v1/default/banks/oracle/documents?limit=200&offset=0", method="GET",
     )
     result = mcp_mod.hindsight_list_documents(bank="oracle")
     assert len(result) == len(fixture["items"])
@@ -69,7 +69,7 @@ def test_hindsight_list_documents_returns_real_daemon_shape(mcp_mod, mock_daemon
 def test_hindsight_list_documents_with_prefix_filters_client_side(mcp_mod, mock_daemon):
     fixture = load_fixture("documents")
     mock_daemon["respond"](
-        fixture, url="/v1/default/banks/oracle/documents", method="GET",
+        fixture, url="/v1/default/banks/oracle/documents?limit=200&offset=0", method="GET",
     )
     result = mcp_mod.hindsight_list_documents(bank="oracle", prefix="PHI-")
     assert all(d["id"].startswith("PHI-") for d in result)
@@ -87,9 +87,74 @@ def test_hindsight_list_documents_handles_missing_items_key(mcp_mod, mock_daemon
     is the canary — not this test.
     """
     mock_daemon["respond"](
-        {}, url="/v1/default/banks/oracle/documents", method="GET",
+        {}, url="/v1/default/banks/oracle/documents?limit=200&offset=0", method="GET",
     )
     assert mcp_mod.hindsight_list_documents(bank="oracle") == []
+
+
+def test_hindsight_list_documents_paginates_past_first_page(mcp_mod, mock_daemon):
+    """Daemon pages at `limit` per response; the tool must follow offset to total.
+
+    Regression: the daemon's default page size is 100 and the tool used to
+    issue a single unparameterized GET, silently truncating a 102-document
+    bank to 100.
+    """
+    page1 = [{"id": f"DOC-{i:03d}"} for i in range(200)]
+    page2 = [{"id": f"DOC-{i:03d}"} for i in range(200, 250)]
+    mock_daemon["respond"](
+        {"items": page1, "total": 250, "limit": 200, "offset": 0},
+        url="/v1/default/banks/oracle/documents?limit=200&offset=0", method="GET",
+    )
+    mock_daemon["respond"](
+        {"items": page2, "total": 250, "limit": 200, "offset": 200},
+        url="/v1/default/banks/oracle/documents?limit=200&offset=200", method="GET",
+    )
+    result = mcp_mod.hindsight_list_documents(bank="oracle")
+    assert len(result) == 250
+    assert result[0]["id"] == "DOC-000"
+    assert result[-1]["id"] == "DOC-249"
+
+
+def test_hindsight_list_documents_prefix_filters_across_all_pages(mcp_mod, mock_daemon):
+    """The prefix filter must apply over the COMPLETE set, not just page one.
+
+    Regression: OBS-001/OBS-002 sat past row 100 and were missed by the filter.
+    """
+    page1 = [{"id": f"PHI-{i:03d}"} for i in range(200)]
+    page2 = [{"id": "OBS-001"}, {"id": "OBS-002"}]
+    mock_daemon["respond"](
+        {"items": page1, "total": 202, "limit": 200, "offset": 0},
+        url="/v1/default/banks/oracle/documents?limit=200&offset=0", method="GET",
+    )
+    mock_daemon["respond"](
+        {"items": page2, "total": 202, "limit": 200, "offset": 200},
+        url="/v1/default/banks/oracle/documents?limit=200&offset=200", method="GET",
+    )
+    result = mcp_mod.hindsight_list_documents(bank="oracle", prefix="OBS-")
+    assert [d["id"] for d in result] == ["OBS-001", "OBS-002"]
+
+
+def test_hindsight_list_documents_warns_when_daemon_caps_response(mcp_mod, mock_daemon, capsys):
+    """If the daemon stops serving pages before `total`, warn on stderr.
+
+    Silent truncation is the bug this tool had; if the daemon ever reintroduces
+    it server-side (short page + no more items), the caller must be told.
+    """
+    page1 = [{"id": f"DOC-{i:03d}"} for i in range(80)]
+    mock_daemon["respond"](
+        {"items": page1, "total": 150, "limit": 200, "offset": 0},
+        url="/v1/default/banks/oracle/documents?limit=200&offset=0", method="GET",
+    )
+    mock_daemon["respond"](
+        {"items": [], "total": 150, "limit": 200, "offset": 80},
+        url="/v1/default/banks/oracle/documents?limit=200&offset=80", method="GET",
+    )
+    result = mcp_mod.hindsight_list_documents(bank="oracle")
+    assert len(result) == 80
+    err = capsys.readouterr().err
+    assert "total=150" in err
+    assert "80" in err
+    assert "incomplete" in err
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +301,7 @@ RETAIN_URL = "/v1/default/banks/oracle/memories"
 
 
 def test_hindsight_retain_phi_maps_context_and_metadata(mcp_mod, mock_daemon):
-    mock_daemon["respond"]({"items": []}, url=DOCS_URL, method="GET")
+    mock_daemon["respond"]({"items": []}, url=f"{DOCS_URL}?limit=200&offset=0", method="GET")
     mock_daemon["respond"](
         {"document_id": "PHI-020", "mentioned_at": "2026-04-30T03:30:00+00:00"},
         url=RETAIN_URL, method="POST",
@@ -260,7 +325,7 @@ def test_hindsight_retain_phi_maps_context_and_metadata(mcp_mod, mock_daemon):
 
 
 def test_hindsight_retain_phi_omits_derived_from_when_absent(mcp_mod, mock_daemon):
-    mock_daemon["respond"]({"items": []}, url=DOCS_URL, method="GET")
+    mock_daemon["respond"]({"items": []}, url=f"{DOCS_URL}?limit=200&offset=0", method="GET")
     mock_daemon["respond"](
         {"document_id": "PHI-021"}, url=RETAIN_URL, method="POST",
     )
@@ -309,7 +374,7 @@ def test_retain_rejects_derived_from_in_metadata_even_without_kwarg(mcp_mod, moc
 
 
 def test_hindsight_retain_obs_maps_context_observation(mcp_mod, mock_daemon):
-    mock_daemon["respond"]({"items": []}, url=DOCS_URL, method="GET")
+    mock_daemon["respond"]({"items": []}, url=f"{DOCS_URL}?limit=200&offset=0", method="GET")
     mock_daemon["respond"](
         {"document_id": "OBS-013"}, url=RETAIN_URL, method="POST",
     )
@@ -347,7 +412,7 @@ def test_hindsight_retain_session_log_no_document_id(mcp_mod, mock_daemon):
 
 def test_hindsight_retain_surfaces_http_error(mcp_mod, mock_daemon):
     mock_daemon["respond"](
-        {"items": []}, url=DOCS_URL, method="GET",  # collision-check finds nothing
+        {"items": []}, url=f"{DOCS_URL}?limit=200&offset=0", method="GET",  # collision-check finds nothing
     )
     mock_daemon["respond"](
         {}, url=RETAIN_URL, method="POST", status=400,
@@ -408,7 +473,7 @@ def test_retain_phi_rejects_existing_document_id(mcp_mod, mock_daemon):
     """A PHI whose id already exists is refused — no overwrite POST is sent."""
     mock_daemon["respond"](
         {"items": [{"id": "PHI-033"}, {"id": "PHI-034"}]},
-        url=DOCS_URL, method="GET",
+        url=f"{DOCS_URL}?limit=200&offset=0", method="GET",
     )
     with pytest.raises(ValueError, match="already exists"):
         mcp_mod.hindsight_retain_phi(
@@ -420,7 +485,7 @@ def test_retain_phi_rejects_existing_document_id(mcp_mod, mock_daemon):
 
 def test_retain_obs_rejects_existing_document_id(mcp_mod, mock_daemon):
     mock_daemon["respond"](
-        {"items": [{"id": "OBS-018"}]}, url=DOCS_URL, method="GET",
+        {"items": [{"id": "OBS-018"}]}, url=f"{DOCS_URL}?limit=200&offset=0", method="GET",
     )
     with pytest.raises(ValueError, match="already exists"):
         mcp_mod.hindsight_retain_obs(
@@ -432,7 +497,7 @@ def test_retain_obs_rejects_existing_document_id(mcp_mod, mock_daemon):
 def test_retain_phi_proceeds_when_id_is_new(mcp_mod, mock_daemon):
     """A genuinely new id passes the guard and is retained."""
     mock_daemon["respond"](
-        {"items": [{"id": "PHI-034"}]}, url=DOCS_URL, method="GET",
+        {"items": [{"id": "PHI-034"}]}, url=f"{DOCS_URL}?limit=200&offset=0", method="GET",
     )
     mock_daemon["respond"](
         {"document_id": "PHI-035"}, url=RETAIN_URL, method="POST",
@@ -442,6 +507,30 @@ def test_retain_phi_proceeds_when_id_is_new(mcp_mod, mock_daemon):
     )
     assert result["document_id"] == "PHI-035"
     assert mock_daemon["last_request"]()["method"] == "POST"
+
+
+def test_retain_collision_guard_sees_ids_beyond_first_page(mcp_mod, mock_daemon):
+    """The guard must check the COMPLETE document list, not the first page.
+
+    Regression companion to the list_documents truncation bug: an existing id
+    sitting past row 100 (e.g. OBS-001 in a 102-doc bank) used to pass the
+    guard and get silently overwritten by the daemon's upsert.
+    """
+    page1 = [{"id": f"PHI-{i:03d}"} for i in range(200)]
+    mock_daemon["respond"](
+        {"items": page1, "total": 201, "limit": 200, "offset": 0},
+        url=f"{DOCS_URL}?limit=200&offset=0", method="GET",
+    )
+    mock_daemon["respond"](
+        {"items": [{"id": "OBS-001"}], "total": 201, "limit": 200, "offset": 200},
+        url=f"{DOCS_URL}?limit=200&offset=200", method="GET",
+    )
+    with pytest.raises(ValueError, match="already exists"):
+        mcp_mod.hindsight_retain_obs(
+            bank="oracle", document_id="OBS-001", content="body",
+        )
+    # the guard's paging GETs are the only calls — no POST escaped
+    assert mock_daemon["last_request"]()["method"] == "GET"
 
 
 def test_retain_phi_allow_overwrite_skips_guard_and_updates(mcp_mod, mock_daemon):

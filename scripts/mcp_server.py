@@ -8,6 +8,7 @@ import datetime
 import json
 import os
 import re
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -79,11 +80,52 @@ def hindsight_stats(bank: str) -> dict:
     return _get(f"/v1/default/banks/{bank}/stats")
 
 
+DOCS_PAGE_LIMIT = 200
+
+
+def _list_documents_all(bank: str) -> list[dict]:
+    """Fetch ALL documents in the bank, paging past the daemon's default cap.
+
+    The daemon's /documents endpoint defaults to 100 items per page and
+    truncates silently — an unparameterized GET on a 102-document bank
+    returns exactly 100. Request explicit pages and follow offset until
+    `total` is reached (or a short/empty page, when `total` is absent).
+    If the daemon stops serving pages before `total`, warn on stderr so
+    the truncation is never silent again.
+    """
+    items: list[dict] = []
+    total = None
+    while True:
+        body = _get(
+            f"/v1/default/banks/{bank}/documents"
+            f"?limit={DOCS_PAGE_LIMIT}&offset={len(items)}"
+        )
+        page = body.get("items", [])
+        total = body.get("total", total)
+        if not page:
+            break
+        items.extend(page)
+        if total is None:
+            if len(page) < DOCS_PAGE_LIMIT:
+                break
+        elif len(items) >= total:
+            break
+    if total is not None and len(items) < total:
+        print(
+            f"hindsight-mcp warning: daemon reported total={total} documents "
+            f"for bank {bank!r} but served only {len(items)}; results may be "
+            f"incomplete",
+            file=sys.stderr,
+        )
+    return items
+
+
 @mcp.tool()
 def hindsight_list_documents(bank: str, prefix: str | None = None) -> list[dict]:
-    """List documents in the bank. If prefix is given (e.g., "PHI-"), filter client-side."""
-    body = _get(f"/v1/default/banks/{bank}/documents")
-    items = body.get("items", [])
+    """List ALL documents in the bank, paginating past the daemon's default
+    page size of 100. If prefix is given (e.g., "PHI-"), filter client-side
+    over the complete set."""
+    items = _list_documents_all(bank)
     if prefix:
         items = [d for d in items if d.get("id", "").startswith(prefix)]
     return items
@@ -157,8 +199,7 @@ def _retain(bank: str, *, context: str, content: str, document_id: str | None,
             "derived_from must be passed as a kwarg, not inside metadata"
         )
     if document_id is not None and not allow_overwrite:
-        body = _get(f"/v1/default/banks/{bank}/documents")
-        if any(d.get("id") == document_id for d in body.get("items", [])):
+        if any(d.get("id") == document_id for d in _list_documents_all(bank)):
             raise ValueError(
                 f"document_id {document_id!r} already exists in bank {bank!r}; "
                 f"choose the next free id, or pass allow_overwrite=True to "
