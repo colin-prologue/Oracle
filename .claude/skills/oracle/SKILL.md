@@ -146,7 +146,9 @@ If `$ARGUMENTS` is empty, ask the user: "What decision are you facing?"
    `accepted_ids` and `rejected_ids` partition `retrieved_ids` using the
    same verbatim strings — when the synthesis answer describes an entry
    without naming an identifier, match it back to its recall result by
-   content and log that result's `document_id`.
+   content and log the id the rule above derived for that result
+   (its `document_id`, or the text-embedded id when `document_id` is
+   null).
 
    The MCP tool resolves `${HINDSIGHT_ROOT}/.decisions/queries/YYYY-MM.jsonl` internally — no path argument needed.
 
