@@ -26,15 +26,20 @@ if [ $((now - last)) -ge "$SYNC_INTERVAL_SECS" ]; then
 fi
 
 # Read the index from the remote tip so retrieval reflects the freshest state
-# regardless of local working-tree drift; fall back to the local file.
-index=$(git -C "$ORACLE_ROOT" show origin/main:INDEX.md 2>/dev/null) \
-  || index=$(cat "$ORACLE_ROOT/INDEX.md" 2>/dev/null) \
-  || exit 0
+# regardless of local working-tree drift; fall back to the local file. The rev
+# attribute tells /oracle which revision to read record files from.
+if index=$(git -C "$ORACLE_ROOT" show origin/main:INDEX.md 2>/dev/null); then
+  rev="origin/main"
+elif index=$(cat "$ORACLE_ROOT/INDEX.md" 2>/dev/null); then
+  rev="local"
+else
+  exit 0
+fi
 
 behind=$(git -C "$ORACLE_ROOT" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
 
 cat <<EOF
-<team-oracle-index root="$ORACLE_ROOT" behind="$behind">
+<team-oracle-index root="$ORACLE_ROOT" rev="$rev" behind="$behind">
 Team decision oracle index (one line per record). Before recommending an
 architectural approach, technology choice, or tradeoff, consult it with
 /oracle "[question]". Records live under $ORACLE_ROOT/records/.

@@ -19,15 +19,28 @@ missing, tell the user to clone the oracle repo and stop.
 
 1. **Load the index.** Prefer the remote tip so answers reflect teammates'
    latest merges: `git -C $ORACLE_ROOT show origin/main:INDEX.md`; fall back to
-   the local file if that fails. (Skip this if a `<team-oracle-index>` block is
-   already in context from the SessionStart hook and is not marked behind.)
+   the local file if that fails. Note which revision it came from — step 3 must
+   read records from the same one. (Skip loading if a `<team-oracle-index>`
+   block is already in context from the SessionStart hook; its `rev` attribute
+   names the revision.)
 
 2. **Pick candidates.** From the index, select up to 8 record IDs whose hooks
    plausibly bear on the question. Judge from the hook lines only — do not open
    every file. If nothing plausibly relates, go straight to the empty answer in
    step 4.
 
-3. **Read the candidate files** from `$ORACLE_ROOT/records/{phi,obs}/`.
+3. **Read the candidate files from the same revision as the index.** When the
+   index came from `origin/main`, the working tree may be behind and lack a
+   freshly merged record file — resolve each ID's path and content at that
+   revision:
+
+   ```
+   git -C $ORACLE_ROOT ls-tree -r --name-only origin/main records/ | grep <ID>
+   git -C $ORACLE_ROOT show origin/main:<path>
+   ```
+
+   When the index came from the local file — or a record is missing at the
+   remote revision — read from `$ORACLE_ROOT/records/{phi,obs}/` instead.
 
 4. **Relevance gate, then synthesize.** Re-judge each opened record against the
    question's actual subject matter, not surface keywords. If none survives,
