@@ -523,6 +523,132 @@ def test_hindsight_log_query_never_uses_cwd(mcp_mod, tmp_path, monkeypatch):
     assert (hindsight / ".decisions" / "queries").exists()
 
 
+# ---------------------------------------------------------------------------
+# hindsight_log_query — structural ID guard
+#
+# Claude-supplied id lists reached the audit log unchecked, letting invented
+# ids ("OBS-unlabeled-worktree-isolation") and annotated ids ("PHI-024 (twice)")
+# pollute .decisions/queries/*.jsonl. Only PHI-NNN/OBS-NNN or UUID-shaped ids
+# are valid; anything else must fail validation before the append.
+# ---------------------------------------------------------------------------
+
+
+def _canonical_recall_data(**overrides):
+    data = {
+        "outcome": "relevant",
+        "retrieved_ids": ["PHI-024"],
+        "accepted_ids": ["PHI-024"],
+        "rejected_ids": [],
+        "rejection_reasons": {},
+        "result_count": 1,
+    }
+    data.update(overrides)
+    return data
+
+
+def test_hindsight_log_query_rejects_invented_ids(mcp_mod, tmp_path, monkeypatch):
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+
+    with pytest.raises(ValueError, match="OBS-unlabeled-worktree-isolation"):
+        mcp_mod.hindsight_log_query(
+            client="claude-code",
+            question="q",
+            answer="a",
+            recall_data=_canonical_recall_data(
+                retrieved_ids=["PHI-024", "OBS-unlabeled-worktree-isolation"],
+            ),
+        )
+
+    # Non-destructive failure: nothing was appended to the log.
+    assert not list((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
+
+
+def test_hindsight_log_query_rejects_annotated_ids(mcp_mod, tmp_path, monkeypatch):
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+
+    with pytest.raises(ValueError, match="accepted_ids"):
+        mcp_mod.hindsight_log_query(
+            client="claude-code",
+            question="q",
+            answer="a",
+            recall_data=_canonical_recall_data(accepted_ids=["PHI-024 (twice)"]),
+        )
+
+    assert not list((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
+
+
+def test_hindsight_log_query_rejects_non_string_ids(mcp_mod, tmp_path, monkeypatch):
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+
+    with pytest.raises(ValueError, match="rejected_ids"):
+        mcp_mod.hindsight_log_query(
+            client="claude-code",
+            question="q",
+            answer="a",
+            recall_data=_canonical_recall_data(rejected_ids=[42]),
+        )
+
+
+def test_hindsight_log_query_accepts_phi_obs_and_uuid_ids(
+    mcp_mod, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+    uuid_id = "c070546c-a427-4181-9ec3-c251cda07c1e"
+
+    mcp_mod.hindsight_log_query(
+        client="claude-code",
+        question="q",
+        answer="a",
+        recall_data=_canonical_recall_data(
+            retrieved_ids=["PHI-024", "OBS-011", uuid_id],
+            accepted_ids=["PHI-024"],
+            rejected_ids=["OBS-011", uuid_id],
+            result_count=3,
+        ),
+    )
+
+    log_files = list((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
+    assert len(log_files) == 1
+    parsed = json.loads(log_files[0].read_text().strip().splitlines()[-1])
+    assert parsed["retrieved_ids"] == ["PHI-024", "OBS-011", uuid_id]
+
+
+def test_hindsight_log_query_legacy_path_rejects_bad_available_ids(
+    mcp_mod, tmp_path, monkeypatch
+):
+    """The legacy path also accepts Claude-supplied ids via available_ids."""
+    monkeypatch.setenv("HINDSIGHT_ROOT", str(tmp_path))
+
+    with pytest.raises(ValueError, match="retrieved_ids"):
+        mcp_mod.hindsight_log_query(
+            client="claude-code",
+            question="q",
+            answer="a",
+            recall_data={"available_ids": ["OBS-agdr-system"], "result_count": 1},
+        )
+
+    assert not list((tmp_path / ".decisions" / "queries").glob("*.jsonl"))
+
+
+def test_validate_oracle_query_audit_entry_rejects_malformed_ids(mcp_mod):
+    entry = mcp_mod.build_oracle_query_audit_entry(
+        client="claude-code",
+        question="q",
+        workflow_source="native",
+        outcome="relevant",
+        retrieved_ids=["PHI-024"],
+        accepted_ids=["PHI-024"],
+        rejected_ids=[],
+        rejection_reasons={},
+        result_count=1,
+        timestamp="2026-07-06T12:00:00+00:00",
+    )
+    entry["rejected_ids"] = ["PHI-024 and friends"]
+
+    with pytest.raises(ValueError, match="rejected_ids"):
+        mcp_mod.validate_oracle_query_audit_entry(entry)
+
+
 def test_hindsight_artifact_path_anchors_queries_and_markdown_to_hindsight_root(
     mcp_mod, tmp_path, monkeypatch
 ):

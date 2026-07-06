@@ -18,6 +18,9 @@ mcp = FastMCP("hindsight")
 
 DAEMON_URL = "http://localhost:9077"
 ID_PATTERN = re.compile(r"\b(?:PHI|OBS)-\d{3,}\b")
+UUID_PATTERN = re.compile(
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+)
 ORACLE_EMPTY_SIGNAL = "The oracle has no entries relevant to that question."
 ORACLE_QUERY_OUTCOMES = {"relevant", "empty", "irrelevant", "failure"}
 ORACLE_CAPTURE_STATES = {
@@ -396,6 +399,12 @@ def build_oracle_query_audit_entry(
     return entry
 
 
+def _is_structural_id(doc_id: str) -> bool:
+    """True when an id is PHI-NNN/OBS-NNN or a UUID — the only shapes bank
+    documents can carry. Anything else is Claude-invented prose, not an id."""
+    return bool(ID_PATTERN.fullmatch(doc_id) or UUID_PATTERN.fullmatch(doc_id))
+
+
 def validate_oracle_query_audit_entry(entry: dict) -> bool:
     """Validate the canonical Oracle query audit shape."""
     required = {
@@ -419,6 +428,13 @@ def validate_oracle_query_audit_entry(entry: dict) -> bool:
             raise ValueError(f"audit field {key} must be {expected_type.__name__}")
     if entry["outcome"] not in ORACLE_QUERY_OUTCOMES:
         raise ValueError(f"unknown oracle query outcome: {entry['outcome']}")
+    for field in ("retrieved_ids", "accepted_ids", "rejected_ids"):
+        for doc_id in entry[field]:
+            if not isinstance(doc_id, str) or not _is_structural_id(doc_id):
+                raise ValueError(
+                    f"{field} contains malformed id {doc_id!r}: ids must be "
+                    "PHI-NNN/OBS-NNN or UUID document ids from recall results"
+                )
     if entry["outcome"] == "failure" and "error" not in entry:
         raise ValueError("failure audit entries must include error")
     if "candidate_bodies" in entry:
