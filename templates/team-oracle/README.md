@@ -74,6 +74,13 @@ Then, in any Claude Code session:
 Do not invite the team until ~10 genuinely useful records exist. The first
 query a teammate runs decides whether they ever run a second one.
 
+`SEED.md` is an optional starter corpus of portable principles distilled from
+prior projects — a shortcut to those first ~10 records. Don't bulk-copy it into
+`records/`; adopt entries one at a time through `/oracle-debate` or
+`/oracle-observe` so each enters via the normal propose→adopt lifecycle with
+your team as sponsor (its header explains the drill). Delete or keep the file
+afterward — `/oracle` never reads it.
+
 ## Known open items
 
 - Hook scripts are bash; on Windows they need Git Bash or WSL, or a PowerShell port.
