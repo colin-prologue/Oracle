@@ -3,6 +3,6 @@
 **Status:** active
 
 ## OBS-020 — One review finding, four prevented defects: pattern-audit across planned-but-unbuilt code (Switchboard Task 7)
-**Relationship:** standalone
+**Relationship:** extends OBS-006 (same bug-clustering principle, second project — graduation candidate pair)
 
 On 2026-06-12, during Switchboard M0 Plan 1 (Task 7 review), a code-quality reviewer found a ghost-task race in claims.requeue_stale: writing a task file AFTER renaming it into a claimable lane let a concurrent claimer interleave between the rename and the write, duplicating the task across two lanes. Tracing the structural shape — "never mutate an artifact after publishing it to a consumable namespace; finalize first, then publish atomically" — revealed the identical race at four more sites in three NOT-YET-WRITTEN modules of the implementation plan (spawn parent-requeue, spawn depth-cap path, file-result filing, verdict application). The plan was patched as errata commits before any agent implemented those modules, and the fix was named as an explicit invariant ("write-before-move") that subsequent implementer prompts carried. One review finding became four prevented defects at zero implementation cost. Echoes the earlier category-error-clustering observation from oracle-preclear's bank-first write-ordering fix (2026-04-25): a visible instance of a structural bug is evidence the same shape exists wherever the pattern was copied — including into plans that have not yet been executed.

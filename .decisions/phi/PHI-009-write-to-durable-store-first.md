@@ -1,5 +1,7 @@
 <!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
 
+**Status:** merged → PHI-002 2026-07-06
+
 ## PHI-009 — Write to the durable store first; the other copy is a derivative
 
 **Date:** 2026-04-25

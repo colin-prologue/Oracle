@@ -5,7 +5,8 @@
 ## OBS-006 — Category-error bugs come in clusters; inventory before declaring done
 
 **Date:** 2026-04-25
-**Derived from:** PHI-008 (cross-project artifacts in owning repo); PHI-009 (durable store first)
+**Derived from:** PHI-008 (cross-project artifacts in owning repo); PHI-002 write-durable-first corollary (ex-PHI-009 — merged 2026-07-06)
+**Relationship:** extended by OBS-020 (same bug-clustering principle, second project — graduation candidate pair)
 
 ### Pattern
 When investigating a category-error bug, scan for cousins of the same shape before declaring the fix complete. The PHI-leakage bug surfaced one stray file in Travel, but the audit revealed three more divergences: PHI-007 retained to the bank with no corresponding file, PHI-001/002/003 on disk but missing from the bank, and 7 session-log records polluting reflect output. Each shared the same root cause (loose store-to-store coupling) but only one was visible until an explicit inventory was run. Pattern: one bug of category X is evidence that more X-shaped bugs exist; allocate a few minutes to look before assuming the first fix was the only fix.

@@ -1,5 +1,7 @@
 <!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
 
+**Status:** merged → PHI-034 2026-07-06
+
 ## PHI-042 — Coordination constraints live in enforcement surfaces, not communication surfaces
 
 **Date:** 2026-07-03

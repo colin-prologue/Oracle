@@ -1,5 +1,7 @@
 <!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
 
+**Status:** merged → PHI-030 2026-07-06
+
 ## PHI-041 — Evidence before self-report: read order preserves reviewer independence
 
 **Date:** 2026-07-03

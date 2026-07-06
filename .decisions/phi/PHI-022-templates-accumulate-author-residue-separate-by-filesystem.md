@@ -1,5 +1,7 @@
 <!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
 
+**Status:** merged → PHI-010 2026-07-06
+
 ## PHI-022 — Templates accumulate author-only residue; separate dogfood from scaffold by filesystem, not convention
 
 **Date:** 2026-05-19
