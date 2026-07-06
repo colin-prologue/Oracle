@@ -116,13 +116,37 @@ If `$ARGUMENTS` is empty, ask the user: "What decision are you facing?"
        "workflow_source": "claude-skill",
        "recall_substrate": "hindsight:oracle",
        "outcome": "relevant | empty | irrelevant | failure",
-       "retrieved_ids": ["PHI/OBS IDs returned by recall when available"],
-       "accepted_ids": ["PHI/OBS IDs that passed the relevance gate"],
-       "rejected_ids": ["PHI/OBS IDs rejected by the relevance gate"],
-       "rejection_reasons": {"PHI-000": "short reason"},
+       "retrieved_ids": ["bank document ids, derived per the rule below"],
+       "accepted_ids": ["the subset of retrieved_ids that passed the relevance gate"],
+       "rejected_ids": ["the subset of retrieved_ids rejected by the relevance gate"],
+       "rejection_reasons": {"<id from rejected_ids>": "short reason"},
        "result_count": 0
      }
      ```
+
+   **ID derivation rule.** Every id in `retrieved_ids`, `accepted_ids`,
+   `rejected_ids`, and the keys of `rejection_reasons` is a bank document
+   id that `hindsight_list_documents` can resolve. Build `retrieved_ids`
+   mechanically from the step-2 recall results:
+
+   1. For each result, take its `document_id` field copied
+      character-for-character — `PHI-NNN`/`OBS-NNN` for retained entries,
+      a raw UUID for session-log documents. A UUID is the correct id for
+      a session-log hit; log it as-is.
+   2. When `document_id` is null, use the `PHI-NNN`/`OBS-NNN` identifier
+      embedded in the entry's text if one is present. A result with
+      neither contributes no id (it still counts toward `result_count`).
+   3. List each document id once, in first-retrieval order, even when
+      several memory units came from the same document.
+   4. Set `result_count` to the length of the step-2 results list itself,
+      counting every memory unit including repeats of the same document —
+      10 results hitting 9 distinct documents log `result_count: 10`
+      alongside 9 `retrieved_ids`.
+
+   `accepted_ids` and `rejected_ids` partition `retrieved_ids` using the
+   same verbatim strings — when the synthesis answer describes an entry
+   without naming an identifier, match it back to its recall result by
+   content and log that result's `document_id`.
 
    The MCP tool resolves `${HINDSIGHT_ROOT}/.decisions/queries/YYYY-MM.jsonl` internally — no path argument needed.
 
