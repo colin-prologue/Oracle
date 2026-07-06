@@ -14,7 +14,7 @@ When a requirement calls for independence or separation — a fresh-context revi
 The discriminating test is "independent *from the author*, or merely independent *from another reviewer*?" Only the former is what such requirements actually demand. A reviewer that re-inspects an artifact the first reviewer already holds re-derives context for free and adds a dispatch, a protocol, and often a schema change — cost with no marginal independence. Pairs with PHI-030 (independence before autonomy): get the independence you need, but get it once.
 
 ### Evidence
-- OBS-022 — Switchboard Plan 3-C escalation: an adversarial leanness review collapsed a proposed separate "tier-judge" subagent into the existing verifier (already model≠author by construction), deleting a whole dispatch + protocol file + decision-schema bump with no loss of required independence (supports).
+- Switchboard Plan 3-C escalation review, 2026-06-24 (no OBS mirror retained): an adversarial leanness review collapsed a proposed separate "tier-judge" subagent into the existing verifier (already model≠author by construction), deleting a whole dispatch + protocol file + decision-schema bump with no loss of required independence (supports).
 
 ### Where It Applies
 Verification lanes, code/design review gates, multi-agent QA, oversight/escalation layers — any pipeline carrying an independence, fresh-context, or separation-of-duties requirement.
