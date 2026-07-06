@@ -1,5 +1,7 @@
 <!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
 
+**Status:** merged → PHI-002 2026-07-06
+
 ## PHI-046 — A halt-state guard must persist in the system of record
 
 **Date:** 2026-07-05

@@ -21,4 +21,4 @@ Every Edge Case bullet promotes cleanly to a Functional Requirement under challe
 A spec that defers core control flow to an Edge Cases section will pass shallow review (the bullets exist) and fail at plan time (the implementer has to invent the answers). It also masks the spec''s true complexity from gatekeepers — "only 8 FRs" looks small, but "8 FRs + 8 deferred FRs in Edge Cases" is what the implementer actually has to build.
 
 ### Related
-PHI-013 (architectural model where the coordinator must answer ''what happens if subagent X does Y'' for every Y, every run — those answers belong in FRs, not edge cases)
+PHI-030, disk-as-truth corollary (ex-PHI-013, merged 2026-07-06) — architectural model where the coordinator must answer ''what happens if subagent X does Y'' for every Y, every run; those answers belong in FRs, not edge cases

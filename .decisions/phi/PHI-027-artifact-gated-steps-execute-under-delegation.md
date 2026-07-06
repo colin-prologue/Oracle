@@ -1,5 +1,7 @@
 <!-- ORACLE ARTIFACT — canonical copy in the Hindsight repo. Cross-project philosophy. Do not treat as a rule of the source project. -->
 
+**Status:** merged → PHI-034 2026-07-06
+
 ## PHI-027 — Artifact-Gated Steps Are the Only Steps That Execute Under Delegation
 
 **Date:** 2026-06-11
